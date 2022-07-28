@@ -61,3 +61,9 @@ def multiy_plot(data, y_labels, y_lims):
     twin.legend(loc = legend_pos[data_id])
 
   plt.plot()
+  
+# Recall example
+# data = [datafile1, datafile2]
+# y_labels = ['$\Delta$', '$\delta\Delta$']
+# y_lims = [[162  , 176], [-5, -2]]
+# multiy_plot(data, y_labels, y_lims)
