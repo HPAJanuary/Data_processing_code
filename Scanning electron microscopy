@@ -1,0 +1,37 @@
+# Tools
+# This function can be used for solving an equation
+def find_nearest(array, value):
+  array = np.asarray(array)
+  idx = (np.abs(array - value)).argmin()
+  return idx
+
+def find_min(array):
+  min = array[0]
+  for i in range(1,len(array)):
+    if array[i] < min:
+      min = array[i]
+      index = i
+  return min,index
+
+# Find penetration depth including x% of signals/intensities
+# Sum of an array
+def _sum(arr):
+  sum = 0
+  for i in arr:
+    sum = sum + i
+  return sum
+
+# Find the index number on average
+def pos(arr):
+  avg = _sum(arr)*0.95  # x% eg. 95% confidence
+  count = 0
+  num = 0
+  for i in arr:
+    count = count + i 
+    if count < avg: # when current integration less than half total integration
+      num = num + 1 # keep counting
+  return num
+
+# Find the average depth according to the index, column 3 ABS intensity
+def depth(arr):
+  return arr[pos(arr[:,2]),0]
