@@ -1,0 +1,69 @@
+# Recall this function and input file name ...
+def opendata(x): # input file name x as string
+  %cd '../content/drive/MyDrive/NMR spectrum/'
+  file=open(x)
+  data=csv.reader(file)
+  data = list(data)
+  data = np.array(data, dtype=np.float)
+  return data.T # i.e. (nx2)-->(2xn), x[0] is the first column
+
+def nmrstack(data,legends,scale_factor):
+  # Plot size
+  fig = plt.figure()
+  fig.set_figheight(20)
+  fig.set_figwidth(40)
+  ax = fig.add_subplot(121)
+  # Tick
+  ax.tick_params(axis='x', labelsize= 18) # tick label size
+  ax.xaxis.set_major_locator(MultipleLocator(1)) # tick interval
+  ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+  ax.xaxis.set_minor_locator(MultipleLocator(0.5)) # tick interval
+  # plt.xticks(np.arange(0, 51, 5)) # assign ticks manually
+  # plt.yticks(np.arange(0, 11, 1)) 
+  ax.tick_params(which = 'major',length=10) # tick size
+  ax.tick_params(which = 'minor',length=7)
+  ax.tick_params(which='both', width=3)
+  # Spine, frame, axis
+  ax.axes.get_yaxis().set_visible(False) # y axis invisible
+  ax.spines['top'].set_visible(False) # spine invisible
+  ax.spines['right'].set_visible(False)
+  # ax.spines['bottom'].set_visible(False)
+  ax.spines['left'].set_visible(False)
+  matplotlib.rcParams['axes.linewidth'] = 2 # spine size
+  # Invert axis and range
+  ax.set_xlim(-0.1, 8.6)
+  ax.set_ylim(-0.15e7,2.7e7) # lift the baseline and set upper boundary
+  plt.gca().invert_xaxis()
+  # Title
+  ax.set_xlabel('f1(ppm)',fontsize = 22)
+  # Color
+  linecolor = ['red','orange','blue','green','cyan','blue','m']
+  # plot!
+  for data_id in range(0,len(data)):
+    ax.plot(data[data_id][0],
+            data[data_id][1]*scale_factor[data_id]+data_id*5e6,
+            color = linecolor[data_id],linewidth = 2, label = legends[data_id])
+  # Legend
+  ax.legend(fontsize = 20)
+  plt.show()
+
+
+def chemshift_stack(x,y):
+  data = y
+  for i in range(0,len(x)):
+    data[i] = np.stack((x[i],y[i][0]))
+  return data
+# chemical shift stack example
+# y_data1 = opendata('data1.csv')
+# x_data1 = np.linspace(start,end,number)
+# data1 = np.stack((x_data1,y_data1))
+
+# Import data
+y_data = [y_data1,y_data2,y_data3,y_data4,y_data5] # recall from google drive
+x_collection = [x_data1,x_data2,x_data3,x_data4,x_data5] # create manually
+legends = ['chmcl1','chmcl2','chmcl3','chmcl4','chmcl5']
+data = chemshift_stack(x_collection,y_data)
+scale_factor = [2,1,1,1,1] # intensity multiply scale factor
+
+# Recall and plot
+nmrstack(data,legends,scale_factor)
