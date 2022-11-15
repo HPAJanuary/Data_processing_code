@@ -1,0 +1,154 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+import csv
+import matplotlib
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+# csv file recall
+import sys
+# specify the file path
+%cd '/content/drive/MyDrive/XPS/'
+
+def openXPS(x): # input file name x as string
+  with open(x) as file:
+    data=csv.reader(file)
+    data = list(data)
+    data = np.array(data, dtype=np.float)
+    return data.T
+  # Columns in the element fit: 0Eneryg, 1spectrum, 2composition, 3background, 4residual, fitted curve_1,2,3
+  # Columns in the survey: energy, spectrum
+  
+  
+# Function 1
+# Plot fitted data
+def fit_plot(filename,x_tick,y_tick,curve_list,label_suffix):
+  
+  # Plot size
+  fig, ax = plt.subplots()
+  # fig.subplots_adjust(right=0.75)
+  fig.set_figheight(8)
+  fig.set_figwidth(8)
+
+  # Grid
+  # ax.grid(which='both')
+  # ax.grid(which='minor', alpha=0.2)
+  ax.grid(which='major', alpha=0.5)
+
+  # Spine/Frame
+  matplotlib.rcParams['axes.linewidth'] = 2
+  # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+  # ax.spines['top'].set_visible(False) # spine invisible
+  # ax.spines['right'].set_visible(False)
+  # ax.spines['bottom'].set_visible(False)
+  # ax.spines['left'].set_visible(False)
+
+  # Tick
+  # tick label size
+  ax.tick_params(axis='x', labelsize= 20)
+  ax.tick_params(axis='y', labelsize= 20)
+  # tick size
+  ax.tick_params(which = 'major',length=8) 
+  ax.tick_params(which = 'minor',length=5)
+  ax.tick_params(which='both', width=2)
+  legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+  shape = ['solid','dashed','dotted','dashdotted']
+  shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+  
+
+  # x-axis  
+  ax.set_xlabel("Binding energy (eV)",fontsize = 30)
+  ax.set_xticks(x_tick) # set tick includes the limit of x
+  ax.set_xlim(min(x_tick),max(x_tick))
+  # y-axis
+  ax.set_yticks(y_tick) # set tick includes the limit of y
+  ax.set_ylim(min(y_tick),max(y_tick))
+  ax.set_ylabel("Intensity (cps)",fontsize = 30)
+  # ax.set_yscale('log')
+
+  # Plot
+  columns = ['Energy', 'spectrum', 'composition', 'background', 'residual', 'fit1','fit2','fit3','fit4']
+  # Columns in the element fit: 0Eneryg, 1spectrum, 2composition, 3background, 4residual, fitted curve_1,2,3
+  for i in curve_list:
+    curve_num = columns.index(i)
+    ax.plot(filename[0],filename[curve_num],linewidth = 2,label = i+'_'+label_suffix, linestyle = shape_list[curve_num])
+    ax.legend(loc = legend_pos[1], fontsize = 12)
+
+  plt.show()
+
+# Recall example
+# CystaOz_C = openXPS('CystaOz_C.csv')
+# CystaOz_O = openXPS('CystaOz_O.csv')
+# CystaOz_S = openXPS('CystaOz_S.csv')
+# data = [CystaOz_C,CystaOz_O,CystaOz_S]
+# x_tick = np.arange(528,538,2) # interest region
+# y_tick = np.arange(5000,7200,200) # interest region
+# label_suffix = 'O_CystaOz' # indicates the element and sample
+# # columns = ['Energy', 'spectrum', 'composition', 'background', 'residual', 'fit1','fit2','fit3','fit4']
+# curve = ['spectrum','composition','fit1','fit2']
+# fit_plot(data[1],x_tick,y_tick,curve,label_suffix)
+
+
+# Function 2
+# Plot survey data
+def survey_plot(data_list,x_tick,y_tick,data_labels):
+
+  # Plot size
+  fig, ax = plt.subplots()
+  # fig.subplots_adjust(right=0.75)
+  fig.set_figheight(12)
+  fig.set_figwidth(16)
+
+  # Grid
+  # ax.grid(which='both')
+  # ax.grid(which='minor', alpha=0.2)
+  # ax.grid(which='major', alpha=0.5)
+
+  # Spine/Frame
+  matplotlib.rcParams['axes.linewidth'] = 2
+  # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+  # ax.spines['top'].set_visible(False) # spine invisible
+  # ax.spines['right'].set_visible(False)
+  # ax.spines['bottom'].set_visible(False)
+  # ax.spines['left'].set_visible(False)
+
+  # Tick
+  # tick label size
+  ax.tick_params(axis='x', labelsize= 20)
+  ax.tick_params(axis='y', labelsize= 20)
+  # tick size
+  ax.tick_params(which = 'major',length=8) 
+  ax.tick_params(which = 'minor',length=5)
+  ax.tick_params(which='both', width=2)
+  legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+  shape = ['solid','dashed','dotted','dashdotted']
+  
+
+  # x-axis  
+  ax.set_xlabel("Binding energy (eV)",fontsize = 30)
+  ax.set_xticks(x_tick) # set tick includes the limit of x
+  ax.set_xlim(min(x_tick),max(x_tick))
+  # y-axis
+  ax.set_yticks(y_tick) # set tick includes the limit of y
+  ax.set_ylim(min(y_tick),max(y_tick))
+  ax.set_ylabel("Intensity (cps)",fontsize = 30)
+  # ax.set_yscale('log')
+
+  # Plot
+  for i in range(0,len(data_list)):
+    ax.plot(data_list[i][0],data_list[i][1],linewidth = 2,label = data_labels[i])
+    ax.legend(loc = legend_pos[1], fontsize = 20)
+
+  plt.show()
+
+# Recall example
+# cystaOz_sur1 = openXPS('CysteAu_Oz_01_survey.csv')
+# mlbl5_sur1 = openXPS('mlbl5_01_survey.csv')
+# data = [cystaOz_sur1,mlbl5_sur1]
+# data_labels = ['Cystamine_oxdAu','Cystamine_rawAu','mlbl5','mlbl20']
+# x_tick = np.arange(0,1200,100)
+# x_tick is a list of number. If you use np.arange to create the list, add one interval to the maximum.
+# y_lims = [0,160000]
+# survey_plot(data[1],x_tick,y_tick,data_labels)
