@@ -150,5 +150,5 @@ def survey_plot(data_list,x_tick,y_tick,data_labels):
 # data_labels = ['Cystamine_oxdAu','Cystamine_rawAu','mlbl5','mlbl20']
 # x_tick = np.arange(0,1200,100)
 # x_tick is a list of number. If you use np.arange to create the list, add one interval to the maximum.
-# y_lims = [0,160000]
+# y_tick = [0,160000]
 # survey_plot(data[1],x_tick,y_tick,data_labels)
