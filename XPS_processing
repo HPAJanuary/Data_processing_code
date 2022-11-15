@@ -23,19 +23,19 @@ def openXPS(x): # input file name x as string
   
   
 # Function 1
-# Plot fitted data
-def fit_plot(filename,x_tick,y_tick,curve_list,label_suffix):
-  
+# Plot survey data
+def survey_plot(data_list,data_labels,x_tick = None,y_tick = None):
+
   # Plot size
   fig, ax = plt.subplots()
   # fig.subplots_adjust(right=0.75)
-  fig.set_figheight(8)
-  fig.set_figwidth(8)
+  fig.set_figheight(12)
+  fig.set_figwidth(16)
 
   # Grid
   # ax.grid(which='both')
   # ax.grid(which='minor', alpha=0.2)
-  ax.grid(which='major', alpha=0.5)
+  # ax.grid(which='major', alpha=0.5)
 
   # Spine/Frame
   matplotlib.rcParams['axes.linewidth'] = 2
@@ -55,31 +55,28 @@ def fit_plot(filename,x_tick,y_tick,curve_list,label_suffix):
   ax.tick_params(which='both', width=2)
   legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
   shape = ['solid','dashed','dotted','dashdotted']
-  shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
   
 
   # x-axis  
   ax.set_xlabel("Binding energy (eV)",fontsize = 30)
-  ax.set_xticks(x_tick) # set tick includes the limit of x
-  ax.set_xlim(min(x_tick),max(x_tick))
+  if x_tick != None:
+    ax.set_xticks(x_tick) # set tick includes the limit of x
+    ax.set_xlim(min(x_tick),max(x_tick))
+  else:
+    pass
   # y-axis
-  ax.set_yticks(y_tick) # set tick includes the limit of y
-  ax.set_ylim(min(y_tick),max(y_tick))
   ax.set_ylabel("Intensity (cps)",fontsize = 30)
+  if y_tick != None:
+    ax.set_yticks(y_tick) # set tick includes the limit of y
+    ax.set_ylim(min(y_tick),max(y_tick))
+  else:
+    pass
   # ax.set_yscale('log')
 
   # Plot
-  columns = ['Energy', 'spectrum', 'composition', 'background', 'residual', 'fit1','fit2','fit3','fit4']
-  # Columns in the element fit: 0Eneryg, 1spectrum, 2composition, 3background, 4residual, fitted curve_1,2,3
-  column_nummax = len(filename)
-  for i in curve_list:
-    curve_num = columns.index(i)
-    if curve_num < column_nummax:  
-      ax.plot(filename[0],filename[curve_num],linewidth = 2,label = i+'_'+label_suffix, linestyle = shape_list[curve_num])
-      ax.legend(loc = legend_pos[1], fontsize = 12)
-    else: # not such a fit curve in raw data file
-      print('Warning: Curve' + i +' '+'doesn\'t exist')
-      break
+  for i in range(0,len(data_list)):
+    ax.plot(data_list[i][0],data_list[i][1],linewidth = 2,label = data_labels[i])
+    ax.legend(loc = legend_pos[1], fontsize = 20)
 
   plt.show()
 
