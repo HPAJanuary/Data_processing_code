@@ -71,10 +71,15 @@ def fit_plot(filename,x_tick,y_tick,curve_list,label_suffix):
   # Plot
   columns = ['Energy', 'spectrum', 'composition', 'background', 'residual', 'fit1','fit2','fit3','fit4']
   # Columns in the element fit: 0Eneryg, 1spectrum, 2composition, 3background, 4residual, fitted curve_1,2,3
+  column_nummax = len(filename)
   for i in curve_list:
     curve_num = columns.index(i)
-    ax.plot(filename[0],filename[curve_num],linewidth = 2,label = i+'_'+label_suffix, linestyle = shape_list[curve_num])
-    ax.legend(loc = legend_pos[1], fontsize = 12)
+    if curve_num < column_nummax:  
+      ax.plot(filename[0],filename[curve_num],linewidth = 2,label = i+'_'+label_suffix, linestyle = shape_list[curve_num])
+      ax.legend(loc = legend_pos[1], fontsize = 12)
+    else: # not such a fit curve in raw data file
+      print('Warning: Curve' + i +' '+'doesn\'t exist')
+      break
 
   plt.show()
 
