@@ -1,0 +1,140 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import math
+from scipy.optimize import curve_fit
+import pandas as pd
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+# read example
+path = '/content/drive/MyDrive/GIXS/10-19-22/Processed/'
+data = ['qxy_APDES.csv','qxy_mlbl2.csv','qxy_mlbl5.csv','qxy_mlbl10.csv','qxy_mlbl20.csv','qxy_mlbl40.csv','qxy_Si.csv']
+label = ['APDES','mlbl2','mlbl5','mlbl10','mlbl20','mlbl40','Si']
+
+def readdata_pos(filename):
+  data = pd.read_csv(path+filename,header = None)
+  df =  data.dropna()
+  indexNames = df[ df[0] < 0 ].index
+  half_df = df.drop(index = indexNames , axis = 0)
+  # print(half_df.size)
+  x = half_df.iloc[:,0]
+  y = half_df.iloc[:,1]
+  return x,y
+
+def dataplot(datalist,datalabel):
+  fig, ax = plt.subplots(figsize = (10,8))
+  data_num = len(datalist)
+  for index in range(0,data_num):
+      x,y = readdata_pos(datalist[index])
+      ax.scatter(x,y,label = datalabel[index],s = 2)
+  ax.legend(fontsize = 20)    
+  ax.set_xscale('log')
+  ax.set_yscale('log')
+  ax.grid()
+  ax.set_xlabel("$q_{xy}$ ($\AA^{-1}$)",fontsize = 20)
+  ax.set_ylabel("$I_q$",fontsize = 20)
+  plt.show()
+  
+def dataplot_shift(datalist,datalabel,shift = 0): # Allow stacked curves to shift slightly
+  fig, ax = plt.subplots(figsize = (10,8))
+  data_num = len(datalist)
+  for index in range(0,data_num):
+    x,y = readdata_pos(datalist[index])
+    # When shift has the default 0 value, the shift factor = 1, y is the same as original data
+    shift_factor = shift*(index + 1) + 1
+    y = y.multiply(shift_factor)
+    ax.scatter(x,y,label = datalabel[index],s = 2)
+  ax.legend(fontsize = 20)    
+  ax.set_xscale('log')
+  ax.set_yscale('log')
+  ax.grid()
+  ax.set_xlabel("$q_{xy}$ ($\AA^{-1}$)",fontsize = 20)
+  ax.set_ylabel("$I_q$",fontsize = 20)
+  plt.show()
+
+
+def subtraction(data1,data2,normf1 = 1,normf2 = 1):
+  x1,y1 = readdata_pos(data1)
+  x2,y2 = readdata_pos(data2)
+  dy = y1.multiply(normf1) - y2.multiply(normf2)
+  return x1,dy
+
+def dataplotsub(datalist,datalabel):
+  fig, ax = plt.subplots(figsize = (10,8))
+  data_num = len(datalist)
+  for index in range(0,data_num):
+      x,y = datalist[index]
+      ax.scatter(x,y,label = datalabel[index],s = 2)
+  ax.legend(fontsize = 20)    
+  ax.set_xscale('log')
+  ax.set_yscale('log')
+  ax.set_ylim(1e-3,1e5)
+  ax.grid()
+  ax.set_xlabel("$q_{xy}$ ($\AA^{-1}$)",fontsize = 20)
+  ax.set_ylabel("$I_q$",fontsize = 20)
+  plt.show()
+
+def subtr_plot(data1,data2,label_data1,normf1 = 1,normf2 = 1): # integrate two functions above
+  x1,y1 = readdata_pos(data1)
+  x2,y2 = readdata_pos(data2)
+  dy = y1.multiply(normf1) - y2.multiply(normf2)
+  # display
+  fig, ax = plt.subplots(figsize = (12,10))
+  ax.scatter(x1,dy,label = label_data1 + "_sub",s = 2)
+  # q_porod = np.linspace(0.015,0.08,1000)
+  # Sq = 2*np.pi/q_porod**4
+  # ax.plot(q_porod,Sq,label = 'Smooth interface')
+  ax.legend(fontsize = 20)
+  ax.set_xscale('log')
+  ax.set_yscale('log')
+  ax.set_ylim(1e-3,1e5)
+  ax.grid()
+  ax.set_xlabel("$q_{xy}$ ($\AA^{-1}$)",fontsize = 20)
+  ax.set_ylabel("$I_q$",fontsize = 20)
+  plt.show()
+  return x1,dy
+
+
+# Recall example
+datalist = [data[0],data[1],data[2],data[3],data[4],data[5]]
+datalabel = [label[0],label[1],label[2],label[3],label[4],label[5]]
+dataplot_shift(datalist,datalabel,shift = 20)
+
+mlbl2_sub = subtr_plot(data[1],data[0],label[1],normf1=1)
+mlbl5_sub = subtr_plot(data[2],data[0],label[2],normf1=1.5)
+
+data_sub = [mlbl2_sub,mlbl5_sub,mlbl10_sub,mlbl20_sub,mlbl40_sub]
+label_sub = ['mlbl2_sub','mlbl5_sub','mlbl10_sub','mlbl20_sub','mlbl40_sub']
+dataplotsub(data_sub,label_sub)
+
+
+# Curve fitting_in process
+qx1,qy1 = readdata_pos('qxy_APDES.csv')
+
+def curve_eqn(x,H,A,x0,sigma,B,k):
+  f1 = H + A*np.exp(-(x-x0)**2/(2*sigma**2))
+  f2 = B*x**k
+  return f1 + f2
+
+# popt, pcov = curve_fit(curve_eqn, x1, y1,p0=[0,5e8,-0.03,0.007,3e-2,-2],maxfev=10000)
+
+def Gauss(x,H,A,x0,sigma):
+  return H + A*np.exp(-(x-x0)**2/(2*sigma**2))
+
+def Powerlaw(x,B,k):
+  return B*x**k
+
+y2 = Gauss(qx1,0,5e8,-0.03,0.007)
+y3 = Powerlaw(qx1,3e-2,-2)
+y4 = y2 + y3
+
+plt.plot(qx1,qy1,'o')
+plt.plot(qx1,y2,label = 'Gaussian')
+plt.plot(qx1,y3,label = 'Powerlaw')
+plt.plot(qx1,y4,label = 'composite')
+# plt.yscale('log')
+# plt.xscale('log')
+plt.xlim(0.002,0.02)
+plt.legend()
+plt.show()
