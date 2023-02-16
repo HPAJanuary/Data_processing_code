@@ -1,0 +1,221 @@
+import numpy as np
+import math
+# Plot and curve fit
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import matplotlib.ticker as ticker
+import matplotlib
+from cycler import cycler
+
+# Open .txt file
+def open_txt(file,path = ""):
+    with open(path + file) as dpt:
+        dpt_list = dpt.read()
+    f = dpt_list.split("\n")
+    ind = len(f)
+    obj_name = np.zeros((2,ind))
+    for i in range(0,ind):
+        obj_name[0][i] = float(f[i].split(",")[0])
+        obj_name[1][i] = float(f[i].split(",")[1])
+    return obj_name
+# Open .dpt file
+def open_dpt(file,path = "",splits = ","):
+    with open(path + file) as dpt:
+        f = [line.rstrip("\n") for line in dpt]
+    ind = len(f)
+    obj_name = np.zeros((2,ind))
+    for i in range(0,ind):
+        obj_name[0][i] =float(f[i].split(splits)[0])
+        obj_name[1][i] =float(f[i].split(splits)[1])
+    return obj_name
+    
+    
+# Data example
+Oct1022 = "./JJ_2022_10_10/Raw Data/"
+blk_old_1 = open_dpt("1010_Au_Blank_4res_3min_3mm_PEM1600_RT_Lid_Open.0.dpt",path = Oct1022,splits = "\t")
+
+
+# Plot functoin 1 - mulitple data
+def multiplot(filelist,legends,x_tick = None, y_tick = None, shift = [0]*20, normalize = 0,propcolor = 0):
+    # Shift function is used to stack curves with different magnitude
+    # When normalization is activated, normalize the figure to the input number
+
+    # Plot size
+    fig, ax = plt.subplots()
+    # fig.subplots_adjust(right=0.75)
+    fig.set_figheight(8)
+    fig.set_figwidth(8)
+
+    # Grid
+    # ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Spine/Frame
+    matplotlib.rcParams['axes.linewidth'] = 2
+    # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+    # ax.spines['top'].set_visible(False) # spine invisible
+    # ax.spines['right'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+
+    # Tick
+    # tick label size
+    ax.tick_params(axis='x', labelsize= 20)
+    ax.tick_params(axis='y', labelsize= 20)
+    # tick size
+    ax.tick_params(which = 'major',length=8) 
+    ax.tick_params(which = 'minor',length=5)
+    ax.tick_params(which='both', width=2)
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    shape = ['solid','dashed','dotted','dashdotted']
+    # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+    Rainbow = ["red","chocolate","orange","gold","yellowgreen","green","aqua","deepskyblue","blueviolet","pink","gray"]
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    tab20 = plt.get_cmap("tab20")
+    
+    # x-axis  
+    ax.set_xlabel("Wavelength ($cm^{-1}$)",fontsize = 30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick) # set tick includes the limit of x
+        ax.set_xlim(min(x_tick),max(x_tick))
+        # Calculate major tick interval
+        intv = (max(x_tick)-min(x_tick))/(len(x_tick)-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv/5))
+    ax.invert_xaxis()
+    # y-axis
+    ax.set_ylabel("Absorption",fontsize = 30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick) # set tick includes the limit of y
+        ax.set_ylim(min(y_tick),max(y_tick))
+    # ax.set_yscale('log')
+
+    # Plot
+    if normalize == 0:
+        for i in range(0,len(filelist)): 
+            if propcolor == 0:
+                ax.plot(filelist[i][0],filelist[i][1]+shift[i],linewidth = 2,label = legends[i])
+            if propcolor == 1:
+                ax.plot(filelist[i][0],filelist[i][1]+shift[i],linewidth = 2,label = legends[i],color = tab20(i))
+            ax.legend(loc = legend_pos[1], fontsize = 12)
+    else:
+        ax.set_ylabel("Normalized Absorption",fontsize = 30)
+        for i in range(0,len(filelist)):
+            max_sig = np.max(filelist[i][1])
+            if propcolor == 0:
+                ax.plot(filelist[i][0],filelist[i][1]/max_sig*normalize,linewidth = 2,label = legends[i])
+            if propcolor == 1:
+                ax.plot(filelist[i][0],filelist[i][1]/max_sig*normalize,linewidth = 2,label = legends[i],color = tab20(i))
+            ax.legend(loc = legend_pos[1], fontsize = 12)
+    
+    # # Color cycle (There is a bug)
+    # matplotlib.rcParams['axes.prop_cycle'] = cycler('color', Default_colorcycle) # Default
+    # if rainbow == 1:
+    #     matplotlib.rcParams['axes.prop_cycle'] = cycler(color=Line_colors)
+        
+    plt.show()
+    
+    
+# Plot function 2 - subtracted data, data1 - data2
+# Specify tick limit for two subplots separately if you need to put constraint on limit
+# Allow adjust the subtrahend by multiplying it with a constant
+def subtr_plot(file1,file2,x_tick = None, y_tick = None,f2_scale = 1): 
+
+    # Plot size
+    fig, axes = plt.subplots(1,2)
+    # fig.subplots_adjust(right=0.75)
+    fig.set_figheight(6)
+    fig.set_figwidth(14)
+    
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', Default_colorcycle)
+    
+    # Set format to each subplot
+    for ax in axes: 
+
+        # Grid
+        # ax.grid(which='both')
+        ax.grid(which='minor', alpha=0.2)
+        ax.grid(which='major', alpha=0.5)
+
+        # Spine/Frame
+        matplotlib.rcParams['axes.linewidth'] = 2
+        # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+        # ax.spines['top'].set_visible(False) # spine invisible
+        # ax.spines['right'].set_visible(False)
+        # ax.spines['bottom'].set_visible(False)
+        # ax.spines['left'].set_visible(False)
+
+        # Tick
+        # tick label size
+        ax.tick_params(axis='x', labelsize= 10)
+        ax.tick_params(axis='y', labelsize= 10)
+        # tick size
+        ax.tick_params(which = 'major',length=8) 
+        ax.tick_params(which = 'minor',length=5)
+        ax.tick_params(which='both', width=2)
+        legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+        shape = ['solid','dashed','dotted','dashdotted']
+        # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+
+        # x-axis  
+        ax.set_xlabel("Wavelength ($cm^{-1}$)",fontsize = 12)
+        ax.invert_xaxis()
+        # y-axis
+        ax.set_ylabel("Absorption",fontsize = 12)
+
+    # Set limit separately
+    if x_tick is not None:
+        axes[0].set_xticks(x_tick[0]) # set tick includes the limit of x
+        axes[0].set_xlim(min(x_tick[0]),max(x_tick[0]))
+        # Calculate major tick interval
+        intv1 = (max(x_tick[0])-min(x_tick[0]))/(len(x_tick[0])-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv1))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv1/5))
+
+        axes[1].set_xticks(x_tick[1]) # set tick includes the limit of x
+        axes[1].set_xlim(min(x_tick[1]),max(x_tick[1]))
+        # Calculate major tick interval
+        intv2 = (max(x_tick[1])-min(x_tick[1]))/(len(x_tick[1])-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv2))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv2/5))
+    
+    if y_tick is not None:
+        axes[0].set_yticks(y_tick[0]) # set tick includes the limit of y
+        axes[0].set_ylim(min(y_tick[0]),max(y_tick[0]))
+        axes[1].set_yticks(y_tick[1]) # set tick includes the limit of y
+        axes[1].set_ylim(min(y_tick[1]),max(y_tick[1]))
+    # ax.set_yscale('log')
+
+    # Plot
+    axes[0].plot(file1[0],file1[1],linewidth = 2,label = "data1")
+    axes[0].plot(file2[0],file2[1],linewidth = 2,label = "data2")
+    axes[0].legend()
+    axes[0].set_title("Display of Original Data",fontsize = 12, fontweight = "bold")
+    axes[1].plot(file1[0],file1[1]-file2[1]*f2_scale,linewidth = 2)
+    axes[1].set_title("Difference between Data", fontsize = 12, fontweight = "bold")
+
+    plt.show()
+    plt.subplots_adjust(top=20)
+    
+    
+# Recall example
+Tm16AR = [mlbl5_d1_2,mlbl5_m_8,mlbl5_w_2]
+legends = ["Dry_Ar","Moisture_Ar","Water_openlid"]
+shiftlist = [0,0,0]
+multiplot(Tm16AR,legends,x_tick = np.arange(1300,1900,100), y_tick = np.arange(2,6,1), shift = shiftlist)
+
+xlimlst = [np.arange(1300,1900,100),np.arange(1300,1900,100)]
+ylimlst = [np.arange(2,7,1),np.arange(-0.15,0.2,0.05)]
+subtr_plot(mlbl5_m_8, mlbl5_d1_1,x_tick = xlimlst, y_tick = ylimlst)
+
+cmrcl_dry = [cmd_d_1,cmd_d_2,cmd_d_3,cmd_d_4,cmd_d_5]
+legends = ["Dry_0min","Dry_3min","Dry_6min","Dry_9min","Dry_12min"]
+multiplot(cmrcl_dry,legends,x_tick = np.arange(1300,1900,100), y_tick = np.arange(20,50,10))
+multiplot(cmrcl_dry,legends,x_tick = np.arange(1300,1900,100), y_tick = np.arange(6,11,1), normalize = 9.5)
+
+Dry2Wet = [m20_d1_4,m20_m_2,m20_m_4,m20_m_6,m20_m_8,m20_m_10,m20_m_12,m20_m_14,m20_m_16,m20_m_17,m20_m_18]
+legends = ["Dry_9min","Moist_6min","Moist_12min","Moist_18min","Moist_24min","Moist_30min","Moist_46min","Moist_60min","Moist_80min","Moist_90min","Moist_100min",]
+multiplot(Dry2Wet,legends,x_tick = np.arange(1300,2000,100), y_tick = np.arange(8,15,1),normalize = 13.5, propcolor = 1)
+multiplot(Dry2Wet,legends,x_tick = np.arange(1600,1800,50), y_tick = np.arange(11,15,1),normalize = 13.5, propcolor = 1)
