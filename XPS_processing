@@ -13,12 +13,15 @@ import sys
 # specify the file path
 %cd '/content/drive/MyDrive/XPS/'
 
-def openXPS(x): # input file name x as string
-  with open(x) as file:
-    data=csv.reader(file)
-    data = list(data)
-    data = np.array(data, dtype=np.float)
-    return data.T
+def openXPS(filename, path = ""): # input file name x as string
+    with open(path + filename) as file:
+        reader = csv.reader(file, delimiter = ',')
+        headers = next(reader)
+        Output = []
+        for rows in reader:
+            Output.append(rows)
+        data = np.array(Output, dtype=np.float64)
+        return data.T
   # Columns in the element fit: 0Eneryg, 1spectrum, 2composition, 3background, 4residual, fitted curve_1,2,3
   # Columns in the survey: energy, spectrum
   
