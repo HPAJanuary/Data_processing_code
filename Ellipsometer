@@ -1,8 +1,11 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import sys
 from scipy.optimize import curve_fit
+import csv
+import matplotlib
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
+                               AutoMinorLocator)
 
 # Read csv file
 from google.colab import drive
@@ -19,6 +22,27 @@ def openElp(x): # input file name x as string
   return data.T # i.e. (nx2)-->(2xn), x[0] is the first column
 # Import data
 # Name = openElp('file_name')
+
+# Linear regression fit
+def fit_func(x,a):
+    return a*x
+
+def Linear_regression(x,y):
+    popt, pcov = curve_fit(fit_func, x, y)
+    residuals = y - fit_func(x,*popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((y - np.mean(y))**2)
+    r_sqr = 1 - ss_res/ss_tot
+    print("y = ",popt,"*x")
+    print("R^2:", r_sqr)
+    return popt, pcov
+
+# # Recall Example
+# cycle1 = np.array([2,5,10,20,40,60])
+# thick_Si = np.array([1.483,3.227,6.499,12.710,23.048,34.528])
+# popt1, pcov1 = Linear_regression(cycle1, thick_Si)
+# x1 = np.linspace(0,100,20)
+# y1 = popt1*x1
 
 # Plot with multiple y-axis
 def multiy_plot(data, y_labels, y_lims):
@@ -62,8 +86,50 @@ def multiy_plot(data, y_labels, y_lims):
 
   plt.plot()
   
-# Recall example
+# # Recall example
 # data = [datafile1, datafile2]
 # y_labels = ['$\Delta$', '$\delta\Delta$']
 # y_lims = [[162  , 176], [-5, -2]]
 # multiy_plot(data, y_labels, y_lims)
+
+# # Example of formal data plotting (After obtaining the fitted thickness from ellipsometry, plot thickness versus cycle number)
+# # Error bar is included
+# # It has not been developed as a function yet due to the complexity of different marker shape, label, and color.
+# fig, ax = plt.subplots(figsize=(8, 8))
+# origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+# matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+# y1err = np.array([0.241,0.099,0.136,0.155,0.235,0.289])
+# plt.scatter(cycle1,thick_Si,label = 'Thickness series 1_Si/Acetone',facecolor='none',edgecolors='r',s=250, alpha = 0.7)
+# plt.errorbar(cycle1,thick_Si,yerr = y1err,fmt="none", capsize = 6, ecolor = 'r')
+# plt.plot(x1,y1,'r--')
+
+# y2err = np.array([0.26,0.235,0.395,0.309,0.442,0.283]) # x2,y2 second one made   series 3
+# plt.scatter(cycle,thick_Au,label = 'Thickness series 3_Au/THF',marker = "^", facecolor='none',edgecolors='k',s=250)  # THF,0.4wt%
+# plt.errorbar(cycle,thick_Au,yerr = y2err,fmt="none", capsize = 6, ecolor = 'k')
+# plt.plot(x2,y2,'k--', linewidth = 2)
+
+# y3err = np.array([0.269,0.209,0.3,1.06,1.346,1.877])   # x3,y3  third one made but is series 2
+# plt.scatter(cycle,thickness_1wt,label = 'Thickness series 2_Au/Acetone',marker = "^", facecolor='none',edgecolors='g',s=250) # Acetone 1wt%
+# plt.errorbar(cycle,thickness_1wt,yerr = y3err,fmt="none", capsize = 6, ecolor = 'g')
+# plt.plot(x3,y3,'g--',linewidth = 2)
+
+# # Plot formatting
+# ax.tick_params(axis='both', labelsize= 20) # tick label size
+# ax.xaxis.set_major_locator(MultipleLocator(10)) # tick interval
+# ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+# ax.xaxis.set_minor_locator(MultipleLocator(5))
+# ax.tick_params(which = 'major',length=10) # tick size
+# ax.tick_params(which = 'minor',length=7)
+# ax.tick_params(which='both', width=2)
+# matplotlib.rcParams['axes.linewidth'] = 2 # spine size
+# # matplotlib.rcParams['font.sans-serif'] = "Arial"
+# # matplotlib.rcParams['font.family'] = "Arial"
+# plt.grid()
+# ax.set_ylabel('Thickness (nm)',fontsize = 30)
+# ax.set_xlabel('Cycle number', fontsize = 30)
+# ax.set_xlim(0,70)
+# ax.set_ylim(0,50)
+# ax.legend(fontsize = 16, loc = "upper left")
+# # plt.savefig("series 123 with bar_3",bbox_inches = "tight")
+# plt.show()
