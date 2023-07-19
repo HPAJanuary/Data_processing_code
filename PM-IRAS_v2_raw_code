@@ -1,0 +1,1082 @@
+# Run the first three cells of code each time
+import numpy as np
+import math
+# Plot and curve fit
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import matplotlib
+from cycler import cycler
+
+# To check the current font type (not compatible with Colab)
+# from matplotlib.font_manager import findfont, FontProperties
+
+
+# Load data
+# Reading PM-IRAS data in a .txt format
+def open_txt(file,path = ""):
+    with open(path + file) as dpt:
+        dpt_list = dpt.read()
+    f = dpt_list.split("\n")
+    ind = len(f)
+    obj_name = np.zeros((2,ind))
+    for i in range(0,ind):
+        obj_name[0][i] = float(f[i].split(",")[0])
+        obj_name[1][i] = float(f[i].split(",")[1])
+    return obj_name
+
+# Reading PM-IRAS data in a .dpt format
+# FUNCTION NEEDED!
+def open_dpt(file,path = "",splits = ","):
+    with open(path + file) as dpt:
+        f = [line.rstrip("\n") for line in dpt]
+    ind = len(f)
+    obj_name = np.zeros((2,ind))
+    for i in range(0,ind):
+        obj_name[0][i] =float(f[i].split(splits)[0])
+        obj_name[1][i] =float(f[i].split(splits)[1])
+    return obj_name
+
+# # Example
+
+# Jan1124 = "./01-24-2023/"
+# m5_d2_1 = open_dpt("0124_Au_TM16AR_4res_10min_3mm_PEM1600_RT_Lid_Closed_50sccm_Ar_Dry_after.0.dpt",splits = "\t",path = Jan1124)
+# m5_d2_2 = open_dpt("0124_Au_TM16AR_4res_10min_3mm_PEM1600_RT_Lid_Closed_50sccm_Ar_Dry_after.1.dpt",splits = "\t",path = Jan1124)
+# m5_d2_3 = open_dpt("0124_Au_TM16AR_4res_10min_3mm_PEM1600_RT_Lid_Closed_50sccm_Ar_Dry_after.2.dpt",splits = "\t",path = Jan1124)
+# m5_d2_4 = open_dpt("0124_Au_TM16AR_4res_10min_3mm_PEM1600_RT_Lid_Closed_50sccm_Ar_Dry_after.3.dpt",splits = "\t",path = Jan1124)
+
+# Linear curve fit
+import matplotlib
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
+                               AutoMinorLocator)
+from scipy.optimize import curve_fit
+
+# Linear regression fit formular
+def fit_func(x,a):
+    return a*x
+
+# linear regression fit (integration pack)
+def Linear_regression(x,y):
+    popt, pcov = curve_fit(fit_func, x, y)
+    residuals = y - fit_func(x,*popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((y - np.mean(y))**2)
+    r_sqr = 1 - ss_res/ss_tot
+    print("y = ",popt,"*x")
+    print("R^2:", r_sqr)
+    return popt, pcov
+
+# Generating data loading text
+
+# "Code/text" means these functions don't read/write any object from globals(). Only using the printed result to save time for typing.
+
+# File version - you have to copy the code and save it in txt format
+def String_replace(path, old_text, new_text): # All input parameters should be strings
+    with open(path,"r") as file:
+        text = file.read()
+        text2 = text.replace(old_text, new_text)
+    with open(path,"w") as file:
+        file.write(text2)
+
+# # Example
+# filepath = "Replace string.txt"
+# String_replace(filepath, "Mar23BL", "Mar23BL60")
+
+
+# interface version
+# Code/Text -- copy the printed results directly
+def add_line(text, idx_dpt, num_data, subname  = None):
+    # num_data is the total number of lines will be generated
+    # idx_dpt is the starting serial number right before .dpt, it must be the same as the one in the original text
+    # Text Condition:
+    # the object name in the text should always start with _1
+    # the idx of dpt must be less than 10
+    # Copy/paste the original text, add another slash in front of "\t", add different quote sign on both sides, i.e. single quote sign
+
+    if subname == None:
+        # Find the index of ".x.dpt" in the text
+        index1 = text.find("_1")
+        index2 = text.find(".{}.dpt".format(idx_dpt))
+
+        # Check if ".0.dpt" is found
+        if index1 != -1 and index2 != -1:
+            # Generate new lines with increasing numbers
+            # The index of object name is forced to start with _1
+            new_lines = [text[:index1] + "_{}".format(i + 1 - idx_dpt) + text[index1+2:index2] + ".{}.dpt".format(i) + text[index2+6:] for i in range(idx_dpt, idx_dpt + num_data)]
+            # Print the new lines
+            for line in new_lines:
+                print(line)
+            return new_lines
+
+    else:
+        # Find the index of ".x.dpt" in the text
+        index1 = text.find("{}_1".format(subname)) # subname usually indicates the dry or hydrated state
+        index2 = text.find(".{}.dpt".format(idx_dpt))
+
+        # Check if ".0.dpt" is found
+        if index1 != -1 and index2 != -1:
+            # Generate new lines with increasing numbers
+            # The index of file name is forced to start with _1
+            new_lines = [text[:index1] + "{}_{}".format(subname, i + 1 - idx_dpt) + text[index1+len(subname)+2:index2] + ".{}.dpt".format(i) + text[index2+6:] for i in range(idx_dpt, idx_dpt + num_data)]
+            # Print the new lines
+            for line in new_lines:
+                print(line)
+            return new_lines
+        else:
+            print(f"Error :the string .{idx_dpt}.dpt is not found in the provided text")
+
+# Code/Text -- replace strings in the printed lines
+def replace_line(lines, old_text, new_text):
+    replaced_lines = []
+    for line in lines:
+        correct_line = line.replace(old_text, new_text)
+        replaced_lines.append(correct_line)
+        print(correct_line)
+    return replaced_lines
+
+
+# Code/Text -- Generate the code for the batch of PM-IRAS data
+def create_data_list(text, idx_data, num_data, num_step = 1, mode = 0):
+    # idx_dpt is the starting index, it must be the same as the one in the original text
+    # num_data is the total number of data will be generated, it is the data of the list
+    # mode 0 generates the data name without quote signs, usually used for create a data list
+    # mode 1 generates the data name with quote signs, usually used for create a legend list
+
+
+    # Find the index of data serial number in the name
+    # Can't just locate the serial number as [-1:] in the string, sometimes the serial number will be bigger than 9
+    index = text.find("_{}".format(idx_data))
+
+    # Check if the index exists
+    if index != -1:
+        # Create a jist of data names
+        new_text = [text[:index] + f"_{i}" for i in range(idx_data, idx_data + num_data, num_step)]
+
+        # Output mode
+        if mode == 0:
+            new_data_text = ", ".join(new_text)
+            print(new_data_text)
+        if mode == 1:
+            print(new_text)
+    else:
+        print(f"Error: the string _{idx_data} is not found in the provided text")
+
+
+# # Example
+# text = 'M27N_dry_1 = open_dpt("0517_Tm27AR_4res_3min_3mm_NIRAS_RT_Ar_Lid_Closed.0.dpt",splits = "\\t", path = May17)'
+# subname = "_dry"
+# idx = 0  # idx.dpt
+
+# code1 = add_line(text, idx, 10, subname)
+# code2 = replace_line(code1, "27", "29")
+
+# text = "mlbl20_d2_2"
+# create_data_list(text, 2, 6, 2)
+
+# #  Example to create a data list for batch processing
+# batch2 = [mlbl20_d2_2, mlbl20_d2_4, mlbl20_d2_6]
+
+# Plot single data
+def sglplot(file,x_tick = None, y_tick = None, data_label = None, normalize = 0, data_color = "#646464", figname = 0, select_coord = None):
+    # Shift function is used to stack curves with different magnitude
+    # When normalization is activated, normalize maximum of each data file to the input number.
+    # When the normalize = 1612, it means normalize the data based on the peak at 1612, namely, based on the aromatic regions.
+    # select_coord allows to display the location of given coordinate in the plot
+
+    # Plot size
+    fig, ax = plt.subplots()
+    # fig.subplots_adjust(right=0.75)
+    fig.set_figheight(8)
+    fig.set_figwidth(8)
+
+    # Grid
+    # ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Spine/Frame
+    matplotlib.rcParams['axes.linewidth'] = 2
+    # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+    # ax.spines['top'].set_visible(False) # spine invisible
+    # ax.spines['right'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+
+    # Tick
+    # tick label size
+    ax.tick_params(axis='x', labelsize= 15)
+    ax.tick_params(axis='y', labelsize= 15)
+    # tick size
+    ax.tick_params(which = 'major',length=8)
+    ax.tick_params(which = 'minor',length=5)
+    ax.tick_params(which='both', width=2)
+
+    # Global parameters
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    shape = ['solid','dashed','dotted','dashdotted']
+    # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+    Rainbow = ["red","chocolate","orange","gold","yellowgreen","green","aqua","deepskyblue","blueviolet","pink","gray"]
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    tab20 = plt.get_cmap("tab20")
+    origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+    # Font
+    # matplotlib.rcParams['font.sans-serif'] = "Arial"
+    # matplotlib.rcParams['font.family'] = "Arial"
+    # font = findfont(FontProperties(family=['sans-serif']))
+    # print(font)
+
+    # x-axis
+    ax.set_xlabel("Wavenumber ($\mathregular{cm^{-1}}$)",fontsize = 30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick) # set tick includes the limit of x
+        ax.set_xlim(min(x_tick),max(x_tick))
+        # Calculate major tick interval
+        intv = (max(x_tick)-min(x_tick))/(len(x_tick)-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv/5))
+    ax.invert_xaxis()
+    # y-axis
+    ax.set_ylabel("Absorbance",fontsize = 30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick) # set tick includes the limit of y
+        ax.set_ylim(min(y_tick),max(y_tick))
+    # ax.set_yscale('log')
+
+    # Plot the data
+    if normalize == 0:
+        ax.plot(file[0],file[1],linewidth = 2, label = data_label, color = data_color)
+    elif normalize == 1612:
+        ax.set_ylabel("Intensity (a.u.)",fontsize = 30)
+        acid_abs1720 = []
+        ref_sig = file[1][1135]
+        ax.plot(file[0],file[1]/ref_sig,linewidth = 2, label = data_label, color = data_color)
+        acid_abs1720.append(file[1][1080]/ref_sig) # peak at 1718
+        # Return a list of intensity at 1718 cm^-1
+        return acid_abs1720
+    else:
+        ax.set_ylabel("Intensity (a.u.)",fontsize = 30)
+        max_sig = np.max(file[1])
+        ax.plot(file[0],file[1]/max_sig*normalize,linewidth = 2, label = data_label, color = data_color)
+
+    # Specify points
+    if select_coord != None:
+        # convert the given x coordinate to the nearest coordinate existing in experimental data
+        data_coord = real_x_coord(file[0], select_coord)
+        for x_coord in data_coord:
+            ax.axvline(x=x_coord, color="#f14040", linestyle="--")
+
+    if figname != 0:
+        if isinstance(figname, str) == True:
+            plt.savefig(figname, bbox_inches = "tight")
+        else:
+            print("Warning: Please input string for figure name")
+
+    if data_label != None:
+        ax.legend()
+    plt.show()
+
+# # Example
+# Show a single spectrum, "x/y_tick = a list of number" indicates the location of ticks on the axis
+# sglplot(data_1, x_tick = np.arange(1100,1900, 100))
+
+# # More examples in multi-peak fit function
+
+# Baseline Correction
+from scipy.interpolate import splrep, splev
+
+# The function to find the nearest index of a given x value, it will help determine the selected points when smoothing the curve
+def find_ind(x_array, x_value):
+    diff = np.abs(x_array - x_value)
+    nearest_index = np.argmin(diff)
+    return nearest_index
+
+# The function to match the given wavenumber list to an actual wavenumber list in the datafile
+def real_x_coord(x_array, wavenum_list):
+    coord_list = []
+    for wavenum in wavenum_list:
+        idx = find_ind(x_array, wavenum)
+        coord_list.append(x_array[idx])
+    return coord_list
+
+# The function to convert the given wavenumber list to an actual indices list in the datafile
+def real_x_indices(x_array, wavenum_list):
+    indices_list = []
+    for wavenum in wavenum_list:
+        idx = find_ind(x_array, wavenum)
+        indices_list.append(idx)
+    return indices_list
+
+# The function to generate a smooth baseline
+def baseline_gen(file, wavenum_list):
+    # Selected points
+    x,y = file
+    selected_indices = real_x_indices(x, wavenum_list)
+    x_selected = [x[i] for i in selected_indices]
+    y_selected = [y[i] for i in selected_indices]
+
+    # Convert the selected coordinates to numpy arrays
+    x_selected = np.array(x_selected)
+    y_selected = np.array(y_selected)
+    x_selected = x_selected[::-1]
+    y_selected = y_selected[::-1]
+    # change the order of the selected points into a ascending order otherwise there will be error by using slprep
+
+    # Smooth the selected curve
+    tck = splrep(x_selected, y_selected, s=0)
+
+    # Evaluate the smoothed curve using the original x-coordinate series
+    y_smooth = splev(x, tck)
+
+    return x, y_smooth
+
+# The function to plot the baseline with original data
+def display_baseline(file, wavenum_list, x_tick = None, y_tick = None, figname = 0):
+    y = file[1]
+    x,y_smooth = baseline_gen(file, wavenum_list)
+
+    # Plot size
+    fig, ax = plt.subplots()
+    # fig.subplots_adjust(right=0.75)
+    fig.set_figheight(8)
+    fig.set_figwidth(8)
+
+    # Grid
+    # ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Spine/Frame
+    matplotlib.rcParams['axes.linewidth'] = 2
+    # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+    # ax.spines['top'].set_visible(False) # spine invisible
+    # ax.spines['right'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+
+    # Tick
+    # tick label size
+    ax.tick_params(axis='x', labelsize= 15)
+    ax.tick_params(axis='y', labelsize= 15)
+    # tick size
+    ax.tick_params(which = 'major',length=8)
+    ax.tick_params(which = 'minor',length=5)
+    ax.tick_params(which='both', width=2)
+
+    # Global parameters
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    shape = ['solid','dashed','dotted','dashdotted']
+    # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+    Rainbow = ["red","chocolate","orange","gold","yellowgreen","green","aqua","deepskyblue","blueviolet","pink","gray"]
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    tab20 = plt.get_cmap("tab20")
+    origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+    # Font
+    # matplotlib.rcParams['font.sans-serif'] = "Arial"
+    # matplotlib.rcParams['font.family'] = "Arial"
+    # font = findfont(FontProperties(family=['sans-serif']))
+    # print(font)
+
+    # x-axis
+    ax.set_xlabel("Wavenumber ($\mathregular{cm^{-1}}$)",fontsize = 30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick) # set tick includes the limit of x
+        ax.set_xlim(min(x_tick),max(x_tick))
+        # Calculate major tick interval
+        intv = (max(x_tick)-min(x_tick))/(len(x_tick)-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv/5))
+    ax.invert_xaxis()
+    # y-axis
+    ax.set_ylabel("Absorbance",fontsize = 30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick) # set tick includes the limit of y
+        ax.set_ylim(min(y_tick),max(y_tick))
+    # ax.set_yscale('log')
+
+    # Plot the data
+    ax.plot(x, y, linewidth = 2, label = "Original data")
+    ax.plot(x, y_smooth, '--', label='Smoothed Curve')
+    ax.legend()
+
+    if figname != 0:
+        if isinstance(figname, str) == True:
+            plt.savefig(figname, bbox_inches = "tight")
+        else:
+            print("Warning: Please input string for figure name")
+    plt.show()
+
+# The function to subtract baseline from original data and save as a new data
+def BL_correction(file, wavenum_list):
+    y = file[1]
+    x,y_smooth = baseline_gen(file, wavenum_list)
+    y_BL = y - y_smooth
+    return x,y_BL
+
+# Batch baseline correction
+def batch_BLcorr(datalist, wavenum_list):
+    # Create a copy to avoid modifying the original dictionary while iterating
+    global_vars = globals().copy()
+    new_name_list = []
+
+    # Perform baseline correction and modify the name of the original data from globals()
+    # Iterate all the elements in datalist
+    for obj in datalist:
+        for name, value in global_vars.items():
+        # check if any of the elements in global is equal to the current value
+            if value is obj:
+                data_BL = BL_correction(value, wavenum_list)
+                insert_pos = name.rfind("_") # Find the position of last underscore
+                new_name = name[:insert_pos] + "_BL" + name[insert_pos:] # insert the _BL before the object serial number
+                # Define new object in the dictionary of globals()
+                globals()[new_name] = data_BL
+                new_name_list.append(new_name)
+    print("These baseline corrected data have been created:", new_name_list)
+
+
+# # Example of baseline correction
+
+# baseline_wavenum = [3800, 3700, 3500, 3400, 3300, 3150, 3000, 2900, 2850, 2700, 2500, 2300, 2200, 2100, 2000, 1900, 1790, 1370, 1050, 950, 900, 800]
+# # Use the select_coord feature to find an appropriate given point list
+# sglplot(data_1, select_coord = baseline_wavenum)
+
+# display_baseline(data_1, baseline_wavenum)
+# BLtest = BL_correction(data_1, baseline_wavenum)
+# # Compare the result with baseline correction from software
+# multiplot([BLtest, OPUS_data], ["Python", "OPUS"], x_tick = np.arange(1100,1900,100))
+
+
+# # Example of batch baseline correction
+
+# baseline_wavenum = [3800, 3700, 3500, 3400, 3300, 3150, 2900, 2850, 2700, 2500, 2300, 2200, 2100, 2000, 1900, 1790, 1365, 1135, 950, 900, 800]
+# text = "mlbl20_d2_2"
+# create_data_list(text, 2, 6)
+
+# # Example batch of data lists with names
+# batch2 = [data_1, data_3, data_5]
+# batch3 = [data_2, data_4, data_6]
+
+# # Try to use BL_correction on several data files (especially the beginning and end of a changing trend) to make sure correction generates appropriate results to all data
+# sglplot(data_9, select_coord = baseline_wavenum)
+# display_baseline(data_9, baseline_wavenum)
+
+# # Perform batch baseline correction
+# batch_BLcorr(batch2, baseline_wavenum)
+# batch_BLcorr(batch3, baseline_wavenum)
+
+# # Verify the baseline corrected data, new data name will be generated with a suffix "_BL" before the serial number
+# sglplot(data_5_BL, x_tick = np.arange(1100,2000,100))
+
+# BL_list_1 = [data_BL_1, ...]
+# BL_list_2 = [data_BL_2, ...]
+# legends = [...]
+# multiplot(BL_list_1, legends, x_tick = np.arange(900,1900,100), y_tick = np.arange(-2,10,2))
+# subtr_plot(data_BL_1, data_BL_2, x_tick = [np.arange(900,1900,100), np.arange(900,1900,100)], y_tick = [np.arange(-1,8,1), np.arange(-0.5, 1.75, 0.25)])
+
+
+# Plot mulitple data
+def multiplot(filelist,legends,x_tick = None, y_tick = None, shift = [0]*20, normalize = 0,propcolor = 0, figname = 0):
+    # Shift function is used to stack curves with different magnitude
+    # When normalization is activated, normalize maximum of each data curve to the input number
+    # When propcolor = 0, it imitate the most common colorcycle in Origin
+    # If you want to save the figure at the current path, assign a string as the figure name to the "figname" parameter
+
+    # Plot size
+    fig, ax = plt.subplots()
+    # fig.subplots_adjust(right=0.75)
+    fig.set_figheight(8)
+    fig.set_figwidth(8)
+
+    # Grid
+    # ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Spine/Frame
+    matplotlib.rcParams['axes.linewidth'] = 2
+    # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+    # ax.spines['top'].set_visible(False) # spine invisible
+    # ax.spines['right'].set_visible(False)
+    # ax.spines['bottom'].set_visible(False)
+    # ax.spines['left'].set_visible(False)
+
+    # Tick
+    # tick label size
+    ax.tick_params(axis='x', labelsize= 15)
+    ax.tick_params(axis='y', labelsize= 15)
+    # tick size
+    ax.tick_params(which = 'major',length=8)
+    ax.tick_params(which = 'minor',length=5)
+    ax.tick_params(which='both', width=2)
+
+    # Global plotting parameters
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    shape = ['solid','dashed','dotted','dashdotted']
+    # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+    Rainbow = ["red","chocolate","orange","gold","yellowgreen","green","aqua","deepskyblue","blueviolet","pink","gray"]
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    tab20 = plt.get_cmap("tab20")
+    origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+    # Font
+    # matplotlib.rcParams['font.sans-serif'] = "Arial"
+    # matplotlib.rcParams['font.family'] = "Arial"
+    # font = findfont(FontProperties(family=['sans-serif']))
+    # print(font)
+
+    # x-axis
+    ax.set_xlabel("Wavenumber ($\mathregular{cm^{-1}}$)",fontsize = 30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick) # set tick includes the limit of x
+        ax.set_xlim(min(x_tick),max(x_tick))
+        # Calculate major tick interval
+        intv = (max(x_tick)-min(x_tick))/(len(x_tick)-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv/5))
+    ax.invert_xaxis()
+    # y-axis
+    ax.set_ylabel("Absorbance",fontsize = 30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick) # set tick includes the limit of y
+        ax.set_ylim(min(y_tick),max(y_tick))
+    # ax.set_yscale('log')
+
+    # Plot
+    if normalize == 0:
+        for i in range(0,len(filelist)):
+            if propcolor == 0:
+                ax.plot(filelist[i][0],filelist[i][1]+shift[i],linewidth = 2,label = legends[i])
+            if propcolor == 1:
+                ax.plot(filelist[i][0],filelist[i][1]+shift[i],linewidth = 2,label = legends[i],color = tab20(i))
+            ax.legend(loc = legend_pos[1], fontsize = 15)
+    elif normalize == 1612:
+        ax.set_ylabel("Intensity (a.u.)",fontsize = 30)
+        acid_abs1720 = []
+        for i in range(0,len(filelist)):
+            ref_sig = filelist[i][1][1135]
+            if propcolor == 0:
+                ax.plot(filelist[i][0],filelist[i][1]/ref_sig,linewidth = 2,label = legends[i])
+            if propcolor == 1:
+                ax.plot(filelist[i][0],filelist[i][1]/ref_sig,linewidth = 2,label = legends[i],color = tab20(i))
+            ax.legend(loc = legend_pos[1], fontsize = 15)
+            acid_abs1720.append(filelist[i][1][1080]/ref_sig) # peak at 1718
+        return acid_abs1720
+    else:
+        ax.set_ylabel("Intensity (a.u.)",fontsize = 30)
+        for i in range(0,len(filelist)):
+            max_sig = np.max(filelist[i][1])
+            if propcolor == 0:
+                ax.plot(filelist[i][0],filelist[i][1]/max_sig*normalize,linewidth = 2,label = legends[i])
+            if propcolor == 1:
+                ax.plot(filelist[i][0],filelist[i][1]/max_sig*normalize,linewidth = 2,label = legends[i],color = tab20(i))
+            ax.legend(loc = legend_pos[1], fontsize = 15)
+
+    if figname != 0:
+        if isinstance(figname, str) == True:
+            plt.savefig(figname, bbox_inches = "tight")
+        else:
+            print("Warning: Please input string for figure name")
+    plt.show()
+
+# # Example 1
+# datalist = [data_1, data_2, data_3]
+# legends = ["data1", "data2", "data3"]
+
+# multiplot(datalist, legends, x_tick = np.arange(1100,1900, 100))
+# multiplot(datalist,legends,x_tick = np.arange(1000,1900,100), y_tick = np.arange(4,11,1), normalize = 9.5)
+
+# # Example 2
+# # Save the list of intensity for acid peak (determine how acid intensity varies with cycle number)
+# acid_int_1 = multiplot(datalist_1,legends,x_tick = np.arange(1100,1900,100), y_tick = np.arange(-0.5,2,0.5), normalize = 1612)
+# acid_int_2 = multiplot(datalist_2,legends,x_tick = np.arange(1100,1900,100), y_tick = np.arange(-0.5,2,0.5), normalize = 1612)
+# # Then you can plot the intensity
+# cycle_num = np.array([5,10,20,30,40,60])
+# fig, ax = plt.subplots(figsize=(8, 8))
+# ax.scatter(cycle_num, acid_int_1, s = 200, label = "Series 2_$\mathregular{5.0\ \AA/cycle}$", color = "#00cbcc")
+# ax.scatter(cycle_num, acid_int_2, s = 200, label = "Series 3_$\mathregular{7.9\ \AA/cycle}$", color = "#f14040")
+# # (plot formatting omitted ...)
+
+
+# # Example 3
+# # Find the wavenumber index of interest
+# print(any_data[0][1135], any_data[0][1104],any_data[0][1169])
+# abs_int = []
+# COvsNH = []
+# for i in data_list:
+#     abs_int.append(i[1][1104])
+#     COvsNH.append(i[1][1169]/i[1][1104]) # If you are interested at C=O/N-H
+# cycle_num = np.array([5,10,20,30,40,60])
+
+# popt, pcov = Linear_regression(cycle_num, abs_int)
+# x1 = np.linspace(0,100,20)
+# y1 = popt*x1
+
+# popt, pcov = Linear_regression(cycle_num, abs_int2)
+# x2 = np.linspace(0,100,20)
+# y2 = popt*x2
+
+# fig, ax = plt.subplots(figsize=(8, 8))
+# origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+# matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+# ax.scatter(cycle_num, abs_int, s = 250, label='Dry', color = "#00cbcc")
+# ax.scatter(cycle_num, abs_int2, s = 250, label='Wet', color = "#fb6501")
+# ax.plot(x1,y1,'k--', linewidth = 2) # dry series
+# ax.plot(x2,y2,'k--', label='Fitted growth rate', linewidth = 2)
+# # (Plot formatting omitted ...)
+
+# Subtract and display data, data1 - data2
+# Specify tick limit for two subplots separately if you need to put constraint on limit
+# Allow adjust the subtrahend by multiplying it with a constant
+def subtr_plot(file1,file2,x_tick = None, y_tick = None,f2_scale = 1):
+
+    data_diff = file1[1]-file2[1]*f2_scale
+
+    # Plot size
+    fig, axes = plt.subplots(1,2)
+    # fig.subplots_adjust(right=0.75)
+    fig.set_figheight(6)
+    fig.set_figwidth(14)
+
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', Default_colorcycle)
+
+    # Set format to each subplot
+    for ax in axes:
+
+        # Grid
+        # ax.grid(which='both')
+        ax.grid(which='minor', alpha=0.2)
+        ax.grid(which='major', alpha=0.5)
+
+        # Spine/Frame
+        matplotlib.rcParams['axes.linewidth'] = 2
+        # ax.axes.get_yaxis().set_visible(False) # y axis invisible
+        # ax.spines['top'].set_visible(False) # spine invisible
+        # ax.spines['right'].set_visible(False)
+        # ax.spines['bottom'].set_visible(False)
+        # ax.spines['left'].set_visible(False)
+
+        # Tick
+        # tick label size
+        ax.tick_params(axis='x', labelsize= 10)
+        ax.tick_params(axis='y', labelsize= 10)
+        # tick size
+        ax.tick_params(which = 'major',length=8)
+        ax.tick_params(which = 'minor',length=5)
+        ax.tick_params(which='both', width=2)
+        legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+        shape = ['solid','dashed','dotted','dashdotted']
+        # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+
+        # x-axis
+        ax.set_xlabel("Wavelength ($cm^{-1}$)",fontsize = 12)
+        # ax.invert_xaxis()
+        # y-axis
+        ax.set_ylabel("Absorbance",fontsize = 12)
+
+    # Set limit separately
+    if x_tick is not None:
+        axes[0].set_xticks(x_tick[0]) # set tick includes the limit of x
+        axes[0].set_xlim(min(x_tick[0]),max(x_tick[0]))
+        # Calculate major tick interval
+        intv1 = (max(x_tick[0])-min(x_tick[0]))/(len(x_tick[0])-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv1))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv1/5))
+
+        axes[1].set_xticks(x_tick[1]) # set tick includes the limit of x
+        axes[1].set_xlim(min(x_tick[1]),max(x_tick[1]))
+        # Calculate major tick interval
+        intv2 = (max(x_tick[1])-min(x_tick[1]))/(len(x_tick[1])-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv2))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv2/5))
+
+    if y_tick is not None:
+        axes[0].set_yticks(y_tick[0]) # set tick includes the limit of y
+        axes[0].set_ylim(min(y_tick[0]),max(y_tick[0]))
+        axes[1].set_yticks(y_tick[1]) # set tick includes the limit of y
+        axes[1].set_ylim(min(y_tick[1]),max(y_tick[1]))
+    # ax.set_yscale('log')
+
+    # Find the object name of the two datasets
+    global_vars = globals().copy()
+    for name, value in global_vars.items():
+        # check if any of the elements in global is equal to the current value
+            if value is file1:
+                label1 = name
+            if value is file2:
+                label2 = name
+
+    # Plot
+    axes[0].plot(file1[0],file1[1],linewidth = 2,label = label1)
+    axes[0].plot(file2[0],file2[1],linewidth = 2,label = label2)
+    axes[0].legend()
+    axes[0].set_title("Display of Original Data",fontsize = 12, fontweight = "bold")
+    axes[1].plot(file1[0],data_diff,linewidth = 2)
+    axes[1].set_title("Difference between Data", fontsize = 12, fontweight = "bold")
+
+    plt.show()
+    plt.subplots_adjust(top=20)
+
+    return [file1[0],data_diff]
+
+# # Example
+# # Subtraction
+# # data1 - data2
+# subtr_plot(data_1, data_3)
+
+# # input x_tick as a list [elementA, elementB]
+# subtr_plot(data_1, data_3, x_tick = [np.arange(1100,1900, 100), np.arange(1300,1800, 50)])
+
+# # Or define the axis range first
+# xlimlst = [np.arange(1300,1900,100),np.arange(1300,1900,100)]
+# ylimlst = [np.arange(0,160,20),np.arange(-50,60,10)]
+# subtr_plot(data_1,data_2, x_tick = xlimlst, y_tick = ylimlst)
+
+- Fitting results:
+ Amp, wid, $\sigma$Amp, $\sigma$wid
+
+- Error propagation:
+$z = f(x,y), \sigma z = \frac{df}{dx}\sigma y + \frac{df}{dy}\sigma x $
+
+- Area = Amp * $\sqrt{2\pi}$ * wid
+- $\frac{d Area}{d Amp} = \sqrt{2\pi} * wid$
+- $\frac{d Area}{d wid} = \sqrt{2\pi} * Amp$
+- $\sigma Area = \sigma Amp* \sqrt{2\pi} * wid + Amp* \sqrt{2\pi} * \sigma wid$
+
+# Multiple-peak fit
+from scipy.integrate import quad
+
+# Crop the data range for fitting and pass them to the curvefit function
+def selectdata(data):
+    x, y = data
+    x_expm = x[1038:1250]
+    y_expm = y[1038:1250]
+    return x_expm, y_expm
+
+# Gaussian function for individual peak
+def gaussian(x, amp, ctr, wid):
+    return amp * np.exp(-((x - ctr)**2 / (2*wid**2)))
+
+# Overall fit function
+def fitfunc(x, *params):
+    y = np.zeros_like(x)
+    # For each Gaussian peak, the fitting parameters include peak center, amplitude, and width (one sigma)
+    for i in range(0, len(params), 3):
+        ctr = params[i]
+        amp = params[i+1]
+        wid = params[i+2]
+        y = y + gaussian(x, amp, ctr, wid)
+    return y
+
+# Reverse the group order of parameters in initial guess
+def rev_list(lst,group_size):
+    # Split the list into groups
+    groups = [lst[i:i+group_size] for i in range(0, len(lst), group_size)]
+
+    # Reverse the order of groups
+    reversed_groups = groups[::-1]
+
+    # Flatten the reversed groups and get the final result
+    result = [item for group in reversed_groups for item in group] # group includes [ctr, amp, wid]
+
+    return result
+
+
+# peak_fit is the one doesn't save confidence intervals of fitting. peak_fit2 return the fitting result as [area,err]
+def peak_fit(data, guess, constr = None):
+    # Select proper data range, the range can be modified by function "selectdata"
+    x_expm = selectdata(data)[0]
+    y_expm = selectdata(data)[1]
+
+    # Assign constraints to fitting parameters
+    if constr == None:
+        constr = ((-np.inf,)*len(guess),(np.inf,)*len(guess))
+
+    # Perform curve fitting
+    popt, pcov = curve_fit(fitfunc, x_expm, y_expm, p0=guess, bounds = constr, maxfev = 10000)
+    # Cumulative fit data
+    y_fit = fitfunc(x_expm, *popt)
+
+    # Chi-square of peak fit
+    Chi2 = 0
+    for m in range(len(y_expm)):
+        diff = (y_fit[m] - y_expm[m])**2/abs(y_expm[m])
+        Chi2 = Chi2 + diff
+    print("Chi-square:", Chi2)
+
+    # Calculating area of each peak
+    x_min = -10000
+    x_max = 10000
+    # Define the function for the area calculation
+    def area_func(x):
+        return gaussian(x, amp, ctr, wid) # amp, ctr, wid are stored in the closure
+    # Create a list to record individual peak area
+    area_peaks = []
+    print("Fitted peaks:")
+    for i in range(0, len(popt), 3):
+        ctr = popt[i]
+        amp = popt[i+1]
+        wid = abs(popt[i+2]) # make sure the width has positive value
+        # Perform numerical integration
+        area, _ = quad(area_func, x_min, x_max, points=[1100, 2000])
+        area_peaks.append(area)
+        # use "points" to estimate the location of peak
+        # otherwise the algorithm is gonna miss the sharp peak in the wide x range
+
+        print("Peak_{:n}".format(i/3+1), ctr,amp,wid, ", Peak area: {:.4f}".format(area))
+        # Plot individual fit peak
+        y_peak = gaussian(x_expm, amp, ctr, wid)
+        plt.plot(x_expm,y_peak)
+
+    # Plot original data and cumulative fit data
+    plt.plot(x_expm, y_expm, "k", label = "Experiment data")
+    plt.plot(x_expm, y_fit , 'r--', label = "Fit data")
+    plt.legend()
+    plt.show()
+
+    return area_peaks
+
+# # Example
+# # Example of deconvolution
+# data = data_1
+# x, y = data
+# # Locate the position with data index
+# print(x[1401],x[985], x[1250], x[1038])
+
+# # initial guess: center, amplitude, width(sigma)
+# guess1 = [1420,1,10, 1450,1.8,20, 1490,4,10, 1550,6.8,25, 1620,6.2,10, 1670,6,20, 1720,0.2,10]
+# guess2 = [1420,1,10, 1450,1.8,20, 1490,4,10, 1550,6.8,25, 1580,0.5,10, 1620,6.2,10, 1650,0.5,10, 1670,6,20, 1720,0.2,10]
+# guess3 = [1420,1,10, 1450,1.8,20, 1490,4,10, 1515,0.5,4, 1540,5,15, 1580,1,5, 1620,6.2,10, 1650,1,5, 1670,6,20, 1720,0.2,10]
+# area1 = peak_fit(data_1,guess1)
+# area2 = peak_fit(data_1,guess2)
+# area3 = peak_fit(data_1,guess3)
+
+# # Example of bounds in peak fitting
+# isrtnum = len(guess3)
+# isrtidx1 = 18
+# cstrlim = ((-np.inf,)*(isrtidx1-1) + (0,) + (-np.inf,)*(isrtnum - isrtidx1),(np.inf,)*(isrtidx1-1) + (15,) + (np.inf,)*(isrtnum - isrtidx1))
+# # Another way to create cstrlim is demonstrated in peak_fit2
+# area4 = peak_fit(data_1,guess3, cstrlim)
+
+# # Example 2 - plot fitted peak area in one figure
+
+# guess4 = []
+# # Generate a list of fit area
+# for idx in range(len(datalist)):
+#     data = datalist[idx]
+#     print(dataname[idx])
+    # fit1_area = peak_fit(data, guess4, constr = cstrlim2)
+    # fit1list.append(fit1_area)
+
+# print(np.shape(fit1list)) # shape: (state_num, peak_num, area&error), in peak_fit1, the result should be (number1, number2)
+
+# # Create list for each peak in a series of different atmosphere states
+# cbnyl = []
+# armrng = []
+# NH = []
+# Hbond = []
+# p1650 = []
+# p1600 = []
+# for state in fit1list:
+#     cbnyl.append(state[9])
+#     p1650.append(state[7])
+#     Hbond.append(state[7] + state[8])
+#     armrng.append(state[6])
+#     p1600.append(state[5])
+#     NH.append(state[4])
+
+# x_state = np.arange(1,10,1)
+# statename = ["d_6", "m_1", "m_5", "m_9", "m_14", "d2_1", "d2_4", "d2_8", "d2_12"]
+
+# fig, ax = plt.subplots(figsize=(8, 8))
+
+# # Plot formatting omitted ...
+
+# ax.scatter(x_state, cbnyl, label = "C=O stretching", s = 150, color = origin_like[9])
+# ax.scatter(x_state, armrng, label = "aromatic ring", s = 150, color = origin_like[6])
+# ax.scatter(x_state, NH, label = "N-H bending", s = 150, color = origin_like[4])
+# ax.scatter(x_state, p1650, label = "Peak 1650", s = 150, color = origin_like[7])
+# ax.scatter(x_state, p1600, label = "Peak 1600", s = 150, color = origin_like[5])
+# # ax.scatter(x_state, Hbond[0], label = "H-bond", s = 150, color = origin_like[8])
+
+# ax.legend(fontsize = 12, loc = legend_pos[0])
+# ax.set_xlabel("mLbL60 states",fontsize = 30)
+# ax.set_ylabel("Peak area",fontsize = 30)
+# plt.xticks(x_state, statename)
+# plt.show()
+
+# Peak fit with confidence interval
+import scipy.optimize as opt
+from scipy import stats
+
+def peak_fit2(data, guess, constr = None):
+    # Select proper data range, the range can be modified by function "selectdata"
+    x_expm = selectdata(data)[0]
+    y_expm = selectdata(data)[1]
+
+    # Assign constraints to fitting parameters
+    if constr == None:
+        constr = ((-np.inf,)*len(guess),(np.inf,)*len(guess))
+
+    # Perform curve fitting
+    popt, pcov = curve_fit(fitfunc, x_expm, y_expm, p0=guess, bounds = constr, maxfev = 10000)
+    # Cumulative fit data
+    y_fit = fitfunc(x_expm, *popt)
+
+    # Extract the standard errors from the diagonal elements of the covariance matrix
+    perr = np.sqrt(np.diag(pcov))
+    # Define the desired confidence level (e.g., 95%)
+    confidence_level = 0.95
+    # Calculate the confidence intervals based on the significance level
+    z_score = stats.norm.ppf(1 - (1 - confidence_level) / 2)
+    conf_intervals = z_score * perr
+    # Print the parameter estimates and confidence intervals
+    # print(conf_intervals)
+    # for i, param in enumerate(popt):
+    #     print(f'Parameter {i+1}: {param:.3f} +/- {conf_intervals[i]:.3f}')
+
+    # Chi-square of peak fit
+    Chi2 = 0
+    for m in range(len(y_expm)):
+        diff = (y_fit[m] - y_expm[m])**2/abs(y_expm[m])
+        Chi2 = Chi2 + diff
+    print("Chi-square:", Chi2)
+
+    # Calculating area of each peak
+
+    # Method 1: Integration
+    # Method 2: Area formula  amp*sqrt(pi)*wid
+    # Define integration range
+    x_min = -10000
+    x_max = 10000
+    # Define the function for the area calculation
+    def area_func(x):
+        return gaussian(x, amp, ctr, wid) # amp, ctr, wid are stored in the closure
+    # Create a list to record individual peak area
+    area_peaks = []
+    area_peaks2 = []
+    area_werr_peaks = []
+    # The area calculated from both methods are the same
+
+    print("Fitted peaks:")
+    for i in range(0, len(popt), 3):
+        ctr = popt[i]
+        amp = popt[i+1]
+        wid = abs(popt[i+2]) # make sure the width has positive value
+        ctr_err = conf_intervals[i]
+        amp_err = conf_intervals[i+1]
+        wid_err = conf_intervals[i+2]
+
+        # # Method 1
+        # # Perform numerical integration
+        # area, _ = quad(area_func, x_min, x_max, points=[1100, 2000])
+        # # use "points" to estimate the location of peak
+        # # otherwise the algorithm is gonna miss the sharp peak in the wide x range
+        # area_peaks.append(area)
+
+        # Method 2
+        area2 = amp*np.sqrt(2*np.pi)*wid
+        area_peaks2.append(area2)
+
+        # Calculate the error in the area using error propagation
+        area_err = np.sqrt((amp_err * (np.sqrt(2*np.pi) * wid))**2 + ((amp**2 * np.sqrt(np.pi)) * wid_err)**2)
+        area_werr_peaks.append([area2, area_err])
+
+        print("Peak_{:n}".format(i/3+1), ", Peak center: {:.4f} +/- {:.4f},".format(ctr, ctr_err),
+              amp,wid, ", Peak area: {:.4f}".format(area2), "+/- {:.4f}".format(area_err))
+
+        # Plot individual fit peak
+        y_peak = gaussian(x_expm, amp, ctr, wid)
+        plt.plot(x_expm,y_peak)
+
+    # Plot original data and cumulative fit data
+    plt.plot(x_expm, y_expm, "k", label = "Experiment data")
+    plt.plot(x_expm, y_fit , 'r--', label = "Fit data")
+    plt.legend()
+    plt.show()
+
+    return area_werr_peaks
+
+# Example
+# fit_area = peak_fit2(data_6, guess4, constr = cstrlim2)
+
+# Example 2 - plot fitted peak area in one figure
+
+# guess4 = [...]
+# # Global bounds in peak fitting
+# min_cstr = tuple()
+# max_cstr = tuple()
+# for i in range(0, len(guess4), 3):
+#     ctr_f = guess4[i]
+#     amp_f = guess4[i+1]
+#     wid_f = guess4[i+2]
+#     min_cstr += (ctr_f - 10,)
+#     min_cstr += (amp_f - 3,)
+#     min_cstr += (wid_f - 5,)
+#     max_cstr += (ctr_f + 10,)
+#     max_cstr += (amp_f + 3,)
+#     max_cstr += (wid_f + 5,)
+
+# cstrlim2 = (min_cstr, max_cstr)
+
+# datalist = [data_1, data_2, ...]
+# dataname = ["data_1", "data_2", ...]
+# fit1list = []
+# fit2list = []
+
+# # Generate a list of fit area
+# for idx in range(len(datalist)):
+#     data = datalist[idx]
+#     print(dataname[idx])
+#     fit2_area = peak_fit2(data, guess4, constr = cstrlim2)
+#     fit2list.append(fit2_area)
+    # print("-" * 80)
+
+# print(np.shape(fit2list)) # shape: (state_num, peak_num, area&error), in peak_fit2, the shape should be (number1, number2, 2)
+
+# # Create list for each peak in a series of different atmosphere states
+# cbnyl = []
+# armrng = []
+# NH = []
+# Hbond = []
+# p1650 = []
+# p1600 = []
+# # For example, state[5] include [[area1, area2, ...], [err1,err2, ...]]
+# for state in fit2list:
+#     cbnyl.append(state[8])
+#     p1650.append(state[7])
+#     armrng.append(state[6])
+#     p1600.append(state[5])
+#     NH.append(state[4])
+
+# # Transpose the array for data plotting 9x2 -> 2x9
+# # The first element is a list of peak areas, the second element is a list of peak area errors
+# cbnyl = np.transpose(cbnyl)
+# armrng = np.transpose(armrng)
+# NH = np.transpose(NH)
+# Hbond = np.transpose(Hbond)
+# p1650 = np.transpose(p1650)
+# p1600 = np.transpose(p1600)
+
+# x_state = np.arange(1,10,1)
+# statename = ["d_6", "m_1", "m_5", "m_9", "m_14", "d2_1", "d2_4", "d2_8", "d2_12"]
+
+# fig, ax = plt.subplots(figsize=(8, 8))
+
+# # Plot formatting omitted
+
+# ax.scatter(x_state, cbnyl[0], label = "C=O stretching", s = 150, color = origin_like[9])
+# ax.scatter(x_state, armrng[0], label = "aromatic ring", s = 150, color = origin_like[6])
+# ax.scatter(x_state, NH[0], label = "N-H bending", s = 150, color = origin_like[4])
+# ax.scatter(x_state, p1650[0], label = "Peak 1650", s = 150, color = origin_like[7])
+# ax.scatter(x_state, p1600[0], label = "Peak 1600", s = 150, color = origin_like[5])
+# ax.scatter(x_state, Hbond[0], label = "H-bond", s = 150, color = origin_like[8])
+
+# ax.legend(fontsize = 12, loc = legend_pos[0])
+# ax.set_xlabel("mLbL60 states",fontsize = 30)
+# ax.set_ylabel("Peak area",fontsize = 30)
+# plt.xticks(x_state, statename)
+# plt.show()
