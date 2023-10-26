@@ -314,6 +314,277 @@ def Bode_plot(filelist, legends, x_tick = None, y_tick = None):
 # Nyqst_plot(m36, legends,  x_tick = np.arange(0,16000,2000), y_tick = np.arange(0,16000,2000))
 # Bode_plot(m36, legends, x_tick = [log_seq, log_seq], y_tick = [log_seq, np.arange(-90, 10, 10)])
 
+# Extract values from Nyquist plot
+
+# Find the local minima to determine the starting point of a semicircle
+def find_locmin(file):
+    # Calculate local minima
+    local_minima_indices = argrelextrema(file[5], np.less)  # Adjust 'order' for tolerance
+    # local_minima_indices = argrelextrema(data, np.less, order=tolerance)  # Adjust 'order' for tolerance
+    # Get the values at local minima indices
+    local_minima_values = file[5][local_minima_indices]
+    # Get the frequencies at local minima indices
+    local_minima_freqs = file[3][local_minima_indices]
+
+    # Print the indices and values of local minima
+    print("Number of data points:", len(file[5]))
+    print("Local Minima Indices:", local_minima_indices)
+    print("Local Minima Values:", local_minima_values)
+    print("Local Minima Frequency:", local_minima_freqs)
+    # Then you should check the indices of local minima. In a EIS file, the starting point of the second semicircle typically have a lot of local minima in a narrow index range.
+
+# Developer mode
+# # Find the local maxima on a semicircle to determine the time constant in Randles circuit
+# def find_locmax(file, highlight = None):
+#     # Calculate local maxima
+#     local_maxima_indices = argrelextrema(file[5], np.greater) # compare the impedance
+#     # Extract the values of the local maxima from your dataset
+#     local_maxima_values = file[5][local_maxima_indices]
+#     # Get the frequencies at local minima indices
+#     local_maxima_freqs = file[3][local_maxima_indices]
+    
+#     # Get the values at local minima indices
+#     print("Local Maxima Indices:", local_maxima_indices)
+#     print("Local Maxima Values:", local_maxima_values)
+#     print("Local Maxima Frequency:", local_maxima_freqs)
+    
+#     if highlight is not None:
+#         return local_maxima_indices
+
+
+# Exhibit a selected range for Nyquist plot for a single data file
+# Example of section "[10,60]"
+# ax is used to insert the plot from this function into other function
+def Nyqst_plot_sect(file, section, x_tick = None, y_tick = None, ax = None):
+    
+    if ax is None:
+        fig, ax = plt.subplots()
+        # Plot size
+        # fig.subplots_adjust(right=0.75)
+        fig.set_figheight(8)
+        fig.set_figwidth(8)
+
+    # Grid
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Tick
+    # tick label size
+    ax.tick_params(axis='x', labelsize= 15)
+    ax.tick_params(axis='y', labelsize= 15)
+    # tick size
+    ax.tick_params(which = 'major',length=8)
+    ax.tick_params(which = 'minor',length=5)
+    ax.tick_params(which='both', width=2)
+
+    # Global plotting parameters
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    shape = ['solid','dashed','dotted','dashdotted']
+    # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+    Rainbow = ["red","chocolate","orange","gold","yellowgreen","green","aqua","deepskyblue","blueviolet","pink","gray"]
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    tab20 = plt.get_cmap("tab20")
+    origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+    # x-axis
+    ax.set_xlabel("$Z_{re}$ (Ohm)",fontsize = 30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick) # set tick includes the limit of x
+        ax.set_xlim(min(x_tick),max(x_tick))
+    # ax.set_xscale('log')
+
+    # y-axis
+    ax.set_ylabel("$-Z_{im}$ (Ohm)",fontsize = 30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick) # set tick includes the limit of y
+        ax.set_ylim(min(y_tick),max(y_tick))
+    # ax.set_yscale('log')
+
+    # Plot a specified range
+    x_data = file[4][section[0]:section[1]]
+    y_data = -1*file[5][section[0]:section[1]]
+    ax.scatter(x_data,y_data,s = 20, color = 'grey')
+
+    return x_data, y_data
+
+        
+# # Recall example
+# find_locmin(eis_m37_1)
+# sect = [60,100]
+# eis_m37_1_sec = Nyqst_plot_sect(eis_m37_1, sect)
+
+
+# Define the function to highlight specific data point in Nyquist plot based on a indices list
+def find_TC(file, idx_lst, resis = None, x_tick = None, y_tick = None, ax = None):
+    
+    if ax is None:
+        fig, ax = plt.subplots()
+        # Plot size
+        # fig.subplots_adjust(right=0.75)
+        fig.set_figheight(5)
+        fig.set_figwidth(5)
+
+    # Grid
+    ax.grid(which='both')
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Tick
+    # tick label size
+    ax.tick_params(axis='x', labelsize= 15)
+    ax.tick_params(axis='y', labelsize= 15)
+    # tick size
+    ax.tick_params(which = 'major',length=8)
+    ax.tick_params(which = 'minor',length=5)
+    ax.tick_params(which='both', width=2)
+
+    # Global plotting parameters
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    shape = ['solid','dashed','dotted','dashdotted']
+    # shape_list = ['solid','solid','dashed','solid','solid','solid','solid','solid','solid']
+    Rainbow = ["red","chocolate","orange","gold","yellowgreen","green","aqua","deepskyblue","blueviolet","pink","gray"]
+    Default_colorcycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    tab20 = plt.get_cmap("tab20")
+    origin_like = ["#646464","#f14040","#37ad6b","#1a6fdf","#b177de","#cc9900","#00cbcc","#7d4e4e","#8e8e00","#fb6501","#6699cc","#6fb802"]
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+    # x-axis
+    ax.set_xlabel("$Z_{re}$ (Ohm)",fontsize = 30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick) # set tick includes the limit of x
+        ax.set_xlim(min(x_tick),max(x_tick))
+    # ax.set_xscale('log')
+
+    # y-axis
+    ax.set_ylabel("$-Z_{im}$ (Ohm)",fontsize = 30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick) # set tick includes the limit of y
+        ax.set_ylim(min(y_tick),max(y_tick))
+    # ax.set_yscale('log')
+
+    # # Generate the data list only contains the given indices
+    locmax_Zre = file[4][idx_lst]
+    locmax_Zim = file[5][idx_lst]
+    
+    # Plot the whole data points
+    ax.scatter(file[4],-1*file[5],s = 20, color = 'grey')
+    # Plot highlighted data points
+    ax.scatter(locmax_Zre,-1*locmax_Zim,s = 20, color = 'red')
+    plt.show()
+    # Exhibit the results
+    print('-' * 40)
+    print("The frequencies in given indices:", file[3][idx_lst])
+    print("The time constants in given indices:", 1/file[3][idx_lst])
+    # if a resistance is given
+    if resis is not None:
+        print("The capacitances in given indices:", (1/file[3][idx_lst])/resis)
+    print('-' * 40)
+    
+
+# # Recall Example  
+# find_TC(eis_m37_1, [19,20,21], resis = 230, x_tick = np.arange(0,1000,100), y_tick = np.arange(0,1000,100))
+
+
+# Fit the data on a semicircle
+
+# It's normal to see "RuntimeWarning: invalid value encountered in sqrt", because there are some points below x axis.
+
+# Define the circle equation with center (a, b)
+def circle_equation(x, a, b, r):
+    return np.sqrt(r**2 - (x - a)**2) + b
+
+# Define the circle equation with center (a, b)
+def circle_fit2(data, section, guess, mode = 0):
+    # Original data
+    x_data = data[4][section[0]:section[1]]
+    y_data = -1*data[5][section[0]:section[1]]
+    # Print the local minima to determine the data range
+    print('-' * 40)
+    print("Local minima:")
+    find_locmin(data)
+    
+    
+    # mode 0
+    if mode == 0:
+    # Single Nyquist plot in selected range
+        temp = Nyqst_plot_sect(data, section)
+    
+    # mode 1 
+    if mode >= 1:
+        # Plot initial guess
+        # Generate points on the fitted circle
+        theta = np.linspace(0, 2 * np.pi, 100)
+        x_init = guess[0] + guess[2] * np.cos(theta)
+        y_init = guess[1] + guess[2] * np.sin(theta)
+        # Plot Nyquist plot on the left side. Plot the original data and the initial guess on the right side
+        fig, (ax1, ax2) = plt.subplots(1, 2,  figsize=(10, 4))
+        # Figure on the right
+        temp = Nyqst_plot_sect(data, section, ax = ax2)
+        ax2.set_aspect('equal', adjustable='box')  # Set equal aspect ratio
+        # Figure on the left
+        ax1.scatter(x_data, y_data, label="Data", color = 'grey')
+        ax1.plot(x_init, y_init, label="Initial guess", color='red')
+        ax1.set_xlabel("X")
+        ax1.set_ylabel("Y")
+        ax1.set_aspect('equal', adjustable='box')  # Set equal aspect ratio
+    
+        # mode 2
+        if mode >= 2:
+            # Fit the data to the circle equation, estimating 'a', 'b', and 'r'
+            params, covariance = curve_fit(circle_equation, x_data, y_data, p0=guess, maxfev = 100000)
+            # Extract the center (a, b) and the radius
+            center_x, center_y, radius = params
+            # Plot the fitted circle
+            x_fit = center_x + radius * np.cos(theta)
+            y_fit = center_y + radius * np.sin(theta)
+            ax1.plot(x_fit, y_fit, label="Fitted Circle", color='green')
+
+            # mode 3
+            if mode == 3:
+                # Calculate if the raidus allow intercept with x-axis
+                dist = radius**2 - center_y**2
+                if dist < 0:
+                    print("There is no intercept")
+                else:
+                    # Calculate the half chord on the x-axis
+                    half_chord = math.sqrt(dist)
+                    x1 = center_x - half_chord
+                    x2 = center_x + half_chord
+                    # Calculate the depressed degree by arctan
+                    degree = math.degrees(math.atan(abs(center_y)/half_chord))
+                    n = 1 - degree/90
+                    # Exhibit results
+                    print('-' * 40)
+                    print("Fitting results:")
+                    print("Predicted radius of the semicircle:", radius)
+                    print("Predicted diameter of the semicircle:", 2*radius)
+                    print("Predicted chord of the semicircle by x axis:", 2*half_chord)
+                    print("The two intercepts are:", x1, x2)
+                    print("n:", n)
+                
+        plt.tight_layout()
+        ax1.legend()
+        plt.show()
+        print('-' * 40)
+    
+# # Recall example
+# # Find appropriate data range on the second semicircle
+# sect = [70,130]
+# # # Fit the second semicircle with designated initial guess
+# i_g = [1900, -450, 1100]
+# circle_fit2(eis_m37_2, sect, i_g, mode = 3)
+
+
+# # Example of Fit the first semicircle
+# sect1 = [17,30]
+# i_g = [170, -60, 100]
+# circle_fit2(eis_Au_8, sect1, i_g, mode = 3)
+# # Find the time constant of Rct and CPE1
+# find_TC(eis_Au_8, [19,20,21], resis = 154.6, x_tick = np.arange(0,600,100), y_tick = np.arange(0,600,100))
+
+
 # CV Plot
 
 def CV_plot(filelist, legends, x_tick = None, y_tick = None):
