@@ -13,27 +13,43 @@ from cycler import cycler
 
 # Load data
 # Reading PM-IRAS data in a .txt format
+# FUNCTION NEEDED!
 def open_txt(file,path = ""):
-    with open(path + file) as dpt:
-        dpt_list = dpt.read()
-    f = dpt_list.split("\n")
+    with open(path + file) as txt:
+        txt_list = txt.read()
+    f = txt_list.split("\n") # split each rows
     ind = len(f)
-    obj_name = np.zeros((2,ind))
+    obj_name = np.zeros((2,ind)) # obj_name is the file that will be writen and manipulated into the kernels
     for i in range(0,ind):
-        obj_name[0][i] = float(f[i].split(",")[0])
-        obj_name[1][i] = float(f[i].split(",")[1])
+        obj_name[0][i] = float(f[i].split(",")[0]) # split the first and second cells in one row with ","
+        obj_name[1][i] = float(f[i].split(",")[1]) # split the first and second cells in one row with ","
     return obj_name
 
 # Reading PM-IRAS data in a .dpt format
 # FUNCTION NEEDED!
 def open_dpt(file,path = "",splits = ","):
     with open(path + file) as dpt:
-        f = [line.rstrip("\n") for line in dpt]
+        f = [line.rstrip("\n") for line in dpt] # split each rows
     ind = len(f)
-    obj_name = np.zeros((2,ind))
+    obj_name = np.zeros((2,ind)) # obj_name is the file that will be writen and manipulated into the kernels
     for i in range(0,ind):
-        obj_name[0][i] =float(f[i].split(splits)[0])
-        obj_name[1][i] =float(f[i].split(splits)[1])
+        obj_name[0][i] =float(f[i].split(splits)[0]) # split the first and second cells in one row with ","
+        obj_name[1][i] =float(f[i].split(splits)[1]) # split the first and second cells in one row with ","
+    return obj_name
+
+# Reading PM-IRAS data in a .csv format
+# FUNCTION NEEDED!
+def open_csv(file,path = "", splits = ","):
+    with open(path + file) as csv:
+        csv_list = csv.read()
+    f = csv_list.split("\n") # split each rows
+    ind = len(f) - 1 # The csv files from that instrument have a blank row at the end for some reasons I don't understand
+    obj_name = np.zeros((2,ind)) # obj_name is the file that will be writen and manipulated into the kernels
+    for i in range(0,ind): # the ith row
+        wvl = f[i].split(splits)[0] # split the first and second cells in one row with ","
+        intensity = f[i].split(splits)[1] # split the first and second cells in one row with ","
+        obj_name[0][i] = float(wvl)
+        obj_name[1][i] = float(intensity)
     return obj_name
 
 # # Example
