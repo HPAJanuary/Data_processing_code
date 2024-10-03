@@ -1,0 +1,185 @@
+# Run the first three cells of code each time
+import numpy as np
+import math
+# Plot and curve fit
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import matplotlib
+from cycler import cycler
+from scipy.signal import find_peaks
+
+# To check the current font type (not compatible with Colab)
+# from matplotlib.font_manager import findfont, FontProperties
+
+
+# Reading ATR-FTIR data in a .csv format with titles and end strings
+def open_csv(file, path="", splits=","):
+    with open(path + file) as csv:
+        csv_list = csv.read()
+    
+    f = csv_list.split("\n")  # Split each row
+    ind = len(f)
+
+    # Initialize an empty list to hold the data
+    data = []
+
+    # Find the start line where both columns are numeric and collect data
+    for i in range(0, ind):
+        try:
+            # Attempt to convert both columns to floats
+            wvl = float(f[i].split(splits)[0])
+            intensity = float(f[i].split(splits)[1])
+
+            # If successful, append the values to the data list
+            data.append([wvl, intensity])
+        except ValueError:
+            # Skip the row if conversion to float fails (non-numeric data, like title or end strings)
+            continue
+
+    # Convert the list into a NumPy array for further manipulation
+    if data:  # Check if there is data to return
+        obj_name = np.array(data).T  # Transpose the array to match your original structure
+        return obj_name
+    else:
+        raise ValueError("No valid data found in the file.")
+
+# # Recall Example
+# PLi_Moist = open_csv("PEO LiTFSI 09042024-1.csv", path = "09042024/")
+
+
+# Collision detection of the peak labels
+def adjust_label_position(ax, x_pos, y_pos, label, existing_labels):
+    """
+    Adjust the label position to avoid overlapping with existing labels.
+    """
+    # Default position
+    y_shift = 0
+
+    # Check for collisions with existing labels
+    for existing_label in existing_labels:
+        ex_x, ex_y = existing_label[0], existing_label[1]
+        if abs(x_pos - ex_x) < 10 and abs(y_pos - ex_y) < 10:  # Adjust thresholds as needed
+            y_shift = -0.05 * max(y_pos, ex_y)  # Shift the label to avoid collision
+
+    # Add the label to the plot with adjusted y-position
+    ax.text(x_pos, y_pos + y_shift, label, ha='left', va='top', fontsize=10, color='black')
+
+    # Store the new label position for future collision checks
+    existing_labels.append((x_pos, y_pos + y_shift))
+
+
+
+# Plot multiple data with peak detection and smart label positioning
+def multiplot(filelist, legends, x_tick=None, y_tick=None, shift=[0]*20, normalize=0, propcolor=0, figname=0, noise_levels=None):
+    """
+    Specify the range of x/y ticks to zoom in, ie., x_tick = np.arange(1100,1900, 100)
+    Shift function is used to stack curves with different magnitude. The limitation of data list is 20
+    When normalization is activated, normalize maximum of each data curve to the input number
+    When propcolor = 0, it imitate the most common colorcycle in Origin
+    If you want to save the figure at the current path, assign a string as the figure name to the "figname" parameter
+    To activate the peak-finding function, input a list of noise levels for each file
+    """
+    # Plot size
+    fig, ax = plt.subplots()
+    fig.set_figheight(8)
+    fig.set_figwidth(16)
+
+    # Grid
+    ax.grid(which='minor', alpha=0.2)
+    ax.grid(which='major', alpha=0.5)
+
+    # Spine/Frame
+    matplotlib.rcParams['axes.linewidth'] = 2
+
+    # Tick
+    ax.tick_params(axis='x', labelsize=20)
+    ax.tick_params(axis='y', labelsize=20)
+    ax.tick_params(which='major', length=8)
+    ax.tick_params(which='minor', length=5)
+    ax.tick_params(which='both', width=2)
+
+    # Global plotting parameters
+    legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
+    origin_like = ["#646464", "#f14040", "#37ad6b", "#1a6fdf", "#b177de", "#cc9900", "#00cbcc", "#7d4e4e", "#8e8e00", "#fb6501", "#6699cc", "#6fb802"]
+    matplotlib.rcParams['axes.prop_cycle'] = cycler('color', origin_like)
+
+    # x-axis
+    ax.set_xlabel("Wavenumber ($\mathregular{cm^{-1}}$)", fontsize=30)
+    if x_tick is not None:
+        ax.set_xticks(x_tick)  # set tick includes the limit of x
+        ax.set_xlim(min(x_tick), max(x_tick))
+        # Calculate major tick interval
+        intv = (max(x_tick)-min(x_tick))/(len(x_tick)-1)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(intv))
+        ax.xaxis.set_minor_locator(ticker.MultipleLocator(intv/5))
+
+    # y-axis
+    ax.set_ylabel("%Transmittance", fontsize=30)
+    if y_tick is not None:
+        ax.set_yticks(y_tick)  # set tick includes the limit of y
+        ax.set_ylim(min(y_tick), max(y_tick))
+
+    ax.invert_xaxis()
+
+    # Plot the data
+    for i in range(0, len(filelist)):
+        if normalize == 0:
+            y_data = filelist[i][1] + shift[i]
+        else:
+            # Normalize based on the highest value (baseline) in the data
+            max_sig = np.max(filelist[i][1])  # Find the highest value (baseline)
+            min_sig = np.min(filelist[i][1])  # Find the lowest value (deepest peak)
+            # Normalize based on the highest value, and shift so that the peak is relative to the baseline
+            y_data = (filelist[i][1] - min_sig) / (max_sig - min_sig) * normalize
+
+        # Plot the data
+        if propcolor == 0:
+            ax.plot(filelist[i][0], y_data, linewidth=2, label=legends[i])
+        else:
+            ax.plot(filelist[i][0], y_data, linewidth=2, label=legends[i], color=plt.get_cmap("tab20")(i))
+
+        # Peak detection with noise filtering
+        if noise_levels is not None and noise_levels[i] > 0:  # Use the noise level for the current file
+            modified_y_data = 100 - y_data  # Invert for peak detection
+            peaks, _ = find_peaks(modified_y_data, height=noise_levels[i])
+
+            existing_labels = []  # Track placed labels to avoid collisions
+
+            # Print the peaks for each file after showing the figure
+            identified_peaks = []  # Store identified peaks for this file
+            for peak in peaks:
+                peak_x = filelist[i][0][peak]
+                peak_y = y_data[peak]
+
+                # Check if the peak is within the x and y limits
+                if (min(x_tick) <= peak_x <= max(x_tick)) and (min(y_tick) <= peak_y <= max(y_tick)):
+                    # Short line at the original peak position
+                    peak_y_min = peak_y - 0.02 * np.max(y_data)  # 2% below the peak
+                    peak_y_max = peak_y + 0.02 * np.max(y_data)  # 2% above the peak
+                    ax.vlines(peak_x, ymin=peak_y_min, ymax=peak_y_max, color='black', linestyle='-', linewidth=1)
+
+                    # Adjust and place the label while avoiding overlap
+                    adjust_label_position(ax, peak_x, peak_y_min, f'{peak_x:.2f}', existing_labels)
+
+                    # Collect identified peak positions
+                    identified_peaks.append(peak_x)
+
+            # Print the identified peaks for the current file
+            print(f"Identified peaks for {legends[i]}: {identified_peaks}")
+
+    ax.legend(loc=legend_pos[2], fontsize=15)
+
+    # Save the figure locally
+    if figname != 0:
+        if isinstance(figname, str):
+            plt.savefig(figname, bbox_inches="tight")
+        else:
+            print("Warning: Please input a valid string for the figure name")
+            
+    print("\n")
+    plt.show()
+
+# # Recall Examples
+# multiplot([PLi_6],["This time_control sample 1"])
+# multiplot([PLi_Moist, PLi_4_1_1, PLi_5_1_1,  PLi_6],["First attempt", "Second attempt", "Third attempt","This time"], shift = [-15, -10, -5, 0])
+# multiplot([PLC_1_3, PLC_1_4],["10-1-1_sample 1", "10-1-1_sample 2"], shift = [0, 0], x_tick = np.arange(2000,3100, 100), y_tick = np.arange(40,100,10), noise_levels=[14,34])
