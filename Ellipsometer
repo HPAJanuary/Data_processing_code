@@ -133,3 +133,80 @@ def multiy_plot(data, y_labels, y_lims):
 # ax.legend(fontsize = 16, loc = "upper left")
 # # plt.savefig("series 123 with bar_3",bbox_inches = "tight")
 # plt.show()
+
+
+# # Visualization of mLbL thickness by dip coating
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Dictionary to store thickness and fitting error data for each sample
+samples_data = {
+    'Tm66AS': {
+        'thickness': [6.65, 7.55, 9.59, 12.41, 13.92, 14.67, 15.59, 22.05, 19.24, 10.28, 2.12],
+        'fitting_error': [1.189, 1.367, 1.736, 1.456, 1.15, 1.217, 1.143, 13.875, 119.324, 12.198, 1.273]
+    },
+    'Tm65AS': {
+        'thickness': [20.24, 22.91, 23.71, 21.56, 20.56, 20.7, 15.98, 12.93, 9.67, 3.92, 2.34],
+        'fitting_error': [5.001, 5.549, 4.593, 2.998, 4.372, 3.394, 2.557, 8.128, 12.852, 1.778, 1.621]
+    }
+}
+
+# Create a function to plot selected samples with an option to turn the fitting error on/off
+def plot_selected_samples(samples_to_plot, samples_data, show_fitting_error=True):
+    # Define the color palettes
+    origin_color4line = ["#646464", "#f14040", "#37ad6b", "#1a6fdf", "#b177de", "#cc9900", "#00cbcc", "#7d4e4e", "#8e8e00", "#fb6501", "#6699cc", "#6fb802"]
+    color4bar = ['#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc948', '#b07aa1', '#ff9da7']
+
+    # Use one of the color palettes for the plot
+    colors = origin_color4line  # You can switch to color4bar by changing this to "colors = color4bar"
+
+    # Create a figure and axis
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # Plot thickness data for each selected sample
+    for idx, sample in enumerate(samples_to_plot):
+        thickness = samples_data[sample]['thickness']
+        beam_position = np.arange(1, len(thickness) + 1)  # Automatically match beam positions to thickness length
+        label_thickness = f'{sample}'  # Only show the sample name
+        ax1.plot(beam_position, thickness, linestyle='-', color=colors[idx % len(colors)], marker='o')
+
+    # Find the largest beam position across all samples
+    max_beam_position = max([len(samples_data[sample]['thickness']) for sample in samples_to_plot])
+
+    # Set x-ticks using the largest beam position
+    ax1.set_xticks(np.arange(1, max_beam_position + 1))
+
+    # If fitting error is shown, plot fitting error as dashed line
+    if show_fitting_error:
+        ax2 = ax1.twinx()  # Create secondary axis for fitting error
+        for idx, sample in enumerate(samples_to_plot):
+            fitting_error = samples_data[sample]['fitting_error']
+            beam_position = np.arange(1, len(fitting_error) + 1)
+            ax2.plot(beam_position, fitting_error, linestyle='--', color=colors[idx % len(colors)], marker='o')
+
+        # Set second y-axis label for fitting error
+        ax2.set_ylabel('Fitting Error', fontsize=12, fontweight='bold')
+
+    # Add labels and title with bold font for thickness (primary y-axis)
+    ax1.set_xlabel('Beam Position', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Film Thickness', fontsize=12, fontweight='bold')
+    ax1.set_title('Ellipsometry Results' if show_fitting_error else 'Film Thickness', fontsize=14, fontweight='bold')
+
+    # Combine legends to show only sample names
+    legend_elements = [plt.Line2D([0], [0], color=colors[idx % len(colors)], lw=2, label=samples_to_plot[idx])
+                       for idx in range(len(samples_to_plot))]
+
+    # Add separate legend for line styles if fitting error is shown
+    if show_fitting_error:
+        legend_elements += [plt.Line2D([0], [0], color='gray', lw=2, linestyle='-', label='Thickness'),
+                            plt.Line2D([0], [0], color='gray', lw=2, linestyle='--', label='Fitting Error')]
+
+    # Display the legend with sample names and line styles
+    ax1.legend(handles=legend_elements, loc='upper right', framealpha=0.5)
+
+    # Show the plot
+    plt.show()
+
+    
+# # Call the function
+# plot_selected_samples(['Tm66AS', 'Tm68AS', 'Tm69AS', 'Tm70AS'], samples_data, show_fitting_error = True)
