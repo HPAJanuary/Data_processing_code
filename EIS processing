@@ -236,12 +236,18 @@ def Nyqst_plot(filelist, legends, x_tick = None, y_tick = None):
     ax.legend(loc = legend_pos[0], fontsize = 15)
     plt.show()
 
+
 def Bode_plot(filelist, legends, x_tick = None, y_tick = None):
     # Plot size
     fig, ax = plt.subplots(1, 2)
     # fig.subplots_adjust(right=0.25)
     fig.set_figheight(6)
     fig.set_figwidth(14)
+    # Ensure square figures and adjust spacing between subplots
+    fig.subplots_adjust(wspace=0.3)  # Adjust horizontal space between subplots
+    # Set each plot to have a square framework
+    ax[0].set_box_aspect(1)  # Ensure the first plot's framework is square
+    ax[1].set_box_aspect(1)  # Ensure the second plot's framework is square
 
     # Global plotting parameters
     legend_pos = ['upper left', 'upper right', 'lower left', 'lower right']
@@ -303,10 +309,11 @@ def Bode_plot(filelist, legends, x_tick = None, y_tick = None):
     for i in range(0,len(filelist)):
         # Absolute impedance
         abs_Z = (filelist[i][4]**2 + filelist[i][5]**2)**0.5
+        # Phase angle
         phase = np.arctan(filelist[i][5]/filelist[i][4]) # tan (angle) = Zim/Zre
         angle = np.degrees(phase) # convert radian to degree
-        ax[0].scatter(filelist[i][3], abs_Z,s = 20,label = legends[i])
-        ax[1].scatter(filelist[i][3], angle,s = 20,label = legends[i])
+        ax[0].scatter(filelist[i][3], abs_Z,s = 20,label = legends[i], facecolors='none', edgecolors=origin_like[i])
+        ax[1].scatter(filelist[i][3], angle,s = 20,label = legends[i], facecolors='none', edgecolors=origin_like[i])
     ax[0].legend(loc = legend_pos[1], fontsize = 15)
     ax[1].legend(loc = legend_pos[1], fontsize = 15)
     plt.show()
